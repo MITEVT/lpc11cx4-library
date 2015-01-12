@@ -16,17 +16,21 @@
 // </h>
 */
 
-    .equ    Stack_Size, 0x00000200
-    .section ".stack", "w"
+
+    .section .stack
     .align  3
-    .globl  __cs3_stack_mem
-    .globl  __cs3_stack_size
-__cs3_stack_mem:
-    .if     Stack_Size
+#ifdef __STACK_SIZE
+    .equ    Stack_Size, __STACK_SIZE
+#else
+    .equ    Stack_Size, 0x200
+#endif
+    .globl  __StackTop
+    .globl  __StackLimit
+__StackLimit:
     .space  Stack_Size
-    .endif
-    .size   __cs3_stack_mem,  . - __cs3_stack_mem
-    .set    __cs3_stack_size, . - __cs3_stack_mem
+    .size   __StackLimit, . - __StackLimit
+__StackTop:
+    .size   __StackTop, . - __StackTop
 
 
 /*
@@ -35,42 +39,47 @@ __cs3_stack_mem:
 // </h>
 */
 
-    .equ    Heap_Size,  0x00001000
-
-    .section ".heap", "w"
+    .section .heap
     .align  3
-    .globl  __cs3_heap_start
-    .globl  __cs3_heap_end
-__cs3_heap_start:
-    .if     Heap_Size
+#ifdef __HEAP_SIZE
+    .equ    Heap_Size, __HEAP_SIZE
+#else
+    .equ    Heap_Size, 0x00001000
+#endif
+    .globl  __HeapBase
+    .globl  __HeapLimit
+__HeapBase:
+    .if Heap_Size
     .space  Heap_Size
     .endif
-__cs3_heap_end:
+    .size   __HeapBase, . - __HeapBase
+__HeapLimit:
+    .size   __HeapLimit, . - __HeapLimit
 
 
 /* Vector Table */
 
-    .section ".cs3.interrupt_vector"
-    .globl  __cs3_interrupt_vector_cortex_m
-    .type   __cs3_interrupt_vector_cortex_m, %object
+    .section .isr_vector
+    .align 2
+    .globl  __isr_vector
+__isr_vector:
+    .long   __StackTop            /* Top of Stack */
+    .long   Reset_Handler         /* Reset Handler */
+    .long   NMI_Handler           /* NMI Handler */
+    .long   HardFault_Handler     /* Hard Fault Handler */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   SVC_Handler           /* SVCall Handler */
+    .long   0                     /* Reserved */
+    .long   0                     /* Reserved */
+    .long   PendSV_Handler        /* PendSV Handler */
+    .long   SysTick_Handler       /* SysTick Handler */
 
-__cs3_interrupt_vector_cortex_m:
-    .long   __cs3_stack                 /* Top of Stack                 */
-    .long   __cs3_reset                 /* Reset Handler                */
-    .long   NMI_Handler                 /* NMI Handler                  */
-    .long   HardFault_Handler           /* Hard Fault Handler           */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   SVC_Handler                 /* SVCall Handler               */
-    .long   0                           /* Reserved                     */
-    .long   0                           /* Reserved                     */
-    .long   PendSV_Handler              /* PendSV Handler               */
-    .long   SysTick_Handler             /* SysTick Handler              */
 
     /* External Interrupts */
     .long   WAKEUP_IRQHandler           /* 16+ 0: Wakeup PIO0.0          */
@@ -105,36 +114,37 @@ __cs3_interrupt_vector_cortex_m:
     .long   PIOINT2_IRQHandler          /* 16+29: PIO INT2               */
     .long   PIOINT1_IRQHandler          /* 16+30: PIO INT2               */
     .long   PIOINT0_IRQHandler          /* 16+31: PIO INT2               */
+    
 
-    .size   __cs3_interrupt_vector_cortex_m, . - __cs3_interrupt_vector_cortex_m
+    .size   __isr_vector, . - __isr_vector
 
 
     .thumb
+    .thumb_func
+    .align  1
+    .globl  Reset_Handler
+    .type   Reset_Handler, %function
 
 
 /* Reset Handler */
 
-    .section .cs3.reset,"x",%progbits
-    .thumb_func
-    .globl  __cs3_reset_cortex_m
-    .type   __cs3_reset_cortex_m, %function
-__cs3_reset_cortex_m:
+Reset_Handler:
     .fnstart
     LDR     R0, =SystemInit
     BLX     R0
-/*.if (RAM_MODE) */
+.if (RAM_MODE)
     LDR     R0,=main
     BX      R0
-/*.else
+.else
 	LDR     R0,=_start
     BX      R0
-.endif*/
+.endif
     .pool
     .cantunwind
     .fnend
-    .size   __cs3_reset_cortex_m,.-__cs3_reset_cortex_m
+    .size   Reset_Handler, . - Reset_Handler
 
-    .section ".text"
+    .section .text
 
 /* Exception Handlers */
 

@@ -7,8 +7,8 @@
  */
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x0, LENGTH = 0x8012 /* 32K */
-  RAM (rwx) : ORIGIN = 0x10000000, LENGTH = 0x2000 /* 8K */
+  FLASH (rx) : ORIGIN = 0x0, LENGTH = 0x8000 /* 32K */
+  RAM (rwx) : ORIGIN = 0x10000100, LENGTH = 0x1F00 /* Slightly less than 8K to avoid using RAM used by CAN*/
 }
 
 /* Linker script to place sections and symbol values. Should be used together
@@ -42,6 +42,7 @@ MEMORY
  *   __stack
  */
 ENTRY(Reset_Handler)
+/* ENTRY(__cs3_reset_cortex_m) */
 
 SECTIONS
 {

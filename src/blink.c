@@ -1,4 +1,7 @@
 #include "LPC11xx.h"
+// #include "system_LPC11xx.h"
+// #include "system_LPC11xx.c"
+
 
 #define LED_PIN 4
 
@@ -11,6 +14,10 @@ void SysTick_Handler(void) {
 __INLINE static void Delay(uint32_t dlyTicks) {
 	uint32_t curTicks = msTicks;
 	while ((msTicks - curTicks) < dlyTicks);
+}
+
+__INLINE static void GPIO_Config(void) {
+	LPC_SYSCON->SYSAHBCLKCTRL |= (1 << 6); //Enable GPIO Clock
 }
 
 __INLINE static void LED_Config(void) {
@@ -31,6 +38,7 @@ int main (void) {
 		while(1);
 	}
 
+	GPIO_Config();
 	LED_Config();
 
 	while(1) {
