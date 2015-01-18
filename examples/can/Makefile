@@ -11,6 +11,9 @@ CFLAGS+=-fno-builtin
 
 LDSCRIPTS=-L. -L $(NXP_BASE)/ldscripts -T gcc.ld
 
+# Driver code
+INC_DRIVER= -I$(NXP_BASE)/Drivers/inc/CANopen/ -I$(NXP_BASE)/Drivers/src/CANopen/
+
 INC = $(INC_DRIVER) $(INC_DEVICE)
 
 LFLAGS=$(USE_NANO) $(USE_NOHOST) $(LDSCRIPTS) $(GC) $(MAP)
