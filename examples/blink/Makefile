@@ -1,4 +1,6 @@
-include makefile.conf
+NXP_BASE=../..
+
+include $(NXP_BASE)/makefile.conf
 NAME=blink
 
 STARTUP_DEFS=-D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
@@ -7,12 +9,18 @@ STARTUP_DEFS=-D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
 # unused without following option
 CFLAGS+=-fno-builtin
 
-LDSCRIPTS=-L. -L $(BASE)/ldscripts -T gcc.ld
+LDSCRIPTS=-L. -L $(NXP_BASE)/ldscripts -T gcc.ld
 
-INC = -I $(BASE)/CMSIS/CM0/DeviceSupport/NXP/LPC11xx/ -I $(BASE)/CMSIS/CM0/CoreSupport/
+INC = -I $(NXP_BASE)/CMSIS/CM0/DeviceSupport/NXP/LPC11xx/ -I $(NXP_BASE)/CMSIS/CM0/CoreSupport/
 
 LFLAGS=$(USE_NANO) $(USE_NOHOST) $(LDSCRIPTS) $(GC) $(MAP)
 
+TARGET=blink-CM0
+
+all: $(TARGET).hex
+
+%.hex: %.axf
+	arm-none-eabi-objcopy -O ihex $^ $@;
 
 $(NAME)-$(CORE).axf: $(NAME).c $(STARTUP) $(SYSTEM)
 	$(CC) $^ $(CFLAGS) $(INC) $(LFLAGS) -o $@
