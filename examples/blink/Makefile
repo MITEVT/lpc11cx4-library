@@ -26,4 +26,4 @@ $(NAME)-$(CORE).axf: $(NAME).c $(STARTUP) $(SYSTEM)
 	$(CC) $^ $(CFLAGS) $(INC) $(LFLAGS) -o $@
 
 clean:
-	rm -f *.axf *.map *.o
+	rm -f *.axf *.map *.o *.hex
