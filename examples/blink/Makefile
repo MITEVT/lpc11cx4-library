@@ -15,6 +15,10 @@ INC = $(INC_DRIVER) $(INC_DEVICE)
 
 LFLAGS=$(USE_NANO) $(USE_NOHOST) $(LDSCRIPTS) $(GC) $(MAP)
 
+DRIVERS= 	gpio_11xx_2.c \
+			sysctl_11xx.c
+DRIVERS_LIB=$(addprefix $(LIB_BASE)/, $(DRIVERS)) 
+
 # System code
 SYSTEM=sysinit.c
 
@@ -25,7 +29,7 @@ all: $(TARGET).hex
 %.hex: %.axf
 	arm-none-eabi-objcopy -O ihex $^ $@;
 
-$(NAME)-$(CORE).axf: $(NAME).c $(STARTUP) $(SYSTEM)
+$(NAME)-$(CORE).axf: $(NAME).c $(STARTUP) $(SYSTEM) $(DRIVERS_LIB)
 	$(CC) $^ $(CFLAGS) $(INC) $(LFLAGS) -o $@
 
 clean:

@@ -43,8 +43,8 @@ int main (void) {
 
 	while(1) {
 		LED_On();
-		Delay(100);
+		Delay(10);
 		LED_Off();
-		Delay(100);
+		Delay(10);
 	}
 }
