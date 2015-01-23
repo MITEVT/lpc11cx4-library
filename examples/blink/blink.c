@@ -33,6 +33,10 @@ __INLINE static void LED_Off(void) {
 }
 
 int main (void) {
+
+	SystemCoreClockUpdate();
+
+
 	if (SysTick_Config (SystemCoreClock / 1000)) {
 		//Error
 		while(1);
@@ -43,8 +47,8 @@ int main (void) {
 
 	while(1) {
 		LED_On();
-		Delay(10);
+		Delay(1000);
 		LED_Off();
-		Delay(10);
+		Delay(1000);
 	}
 }
