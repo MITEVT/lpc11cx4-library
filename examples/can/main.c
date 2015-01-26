@@ -1,18 +1,18 @@
-#include "LPC11xx.h"
-#include "rom_driver_CAN.h"
-#include "rom_drivers.h"
+#include "chip.h"
+
+const uint32_t OscRateIn = 12000000;
 
 int main(void)
 {
 
-	ROM **rom = (ROM **)(0x1fff1ff8);
+	SystemCoreClockUpdate();
 
 	uint32_t CanApiClkInitTable[2] = { 0x00000000UL, // CANCLKDIV 
 									   0x00004DC5UL // CANBT
 	}; 
 
 	// Second Paramter says no interrupts
-	(*rom)->pCAND->init_can(&CanApiClkInitTable[0], 0);
+	LPC_CCAN_API->init_can(&CanApiClkInitTable[0], 0);
 
 	CAN_MSG_OBJ msg_obj;
 
@@ -20,17 +20,17 @@ int main(void)
 	msg_obj.msgobj = 1;
 	msg_obj.mode_id = 0x300;
 	msg_obj.mask = 0x700;
-	(*rom)->pCAND->config_rxmsgobj(&msg_obj);
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
 	//Set message object 2 to receive all 11-bit message 0x200-0x2F0
 	msg_obj.msgobj = 2;
 	msg_obj.mode_id = 0x200;
 	msg_obj.mask = 0x70F;
-	(*rom)->pCAND->config_rxmsgobj(&msg_obj);
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
 	while (1) {
 		msg_obj.msgobj = 1;
-		(*rom)->pCAND->can_receive(&msg_obj);
+		LPC_CCAN_API->can_receive(&msg_obj);
 
 		if (msg_obj.mode_id == 0x200) {
 			//Received 0x200 Message
@@ -39,7 +39,7 @@ int main(void)
 			msg_obj.mask = 0x0;
 			msg_obj.dlc = 1;
 			msg_obj.data[0] = 0x00; 
-			(*rom)->pCAND->can_transmit(&msg_obj);
+			LPC_CCAN_API->can_transmit(&msg_obj);
 		} else if (msg_obj.mode_id == 0x300) {
 			//Received 0x300 Message
 			msg_obj.msgobj = 4;
@@ -47,7 +47,7 @@ int main(void)
 			msg_obj.mask = 0x0;
 			msg_obj.dlc = 1;
 			msg_obj.data[0] = 0x00; 
-			(*rom)->pCAND->can_transmit(&msg_obj);
+			LPC_CCAN_API->can_transmit(&msg_obj);
 		}
 	}
 
