@@ -4,6 +4,7 @@ NXP_BASE=../..
 # Directory Structure
 BINDIR=bin
 SRCDIR=src
+BUILDDIR=build
 
 DRIVERS= 	gpio_11xx_2.c \
 			sysctl_11xx.c \
@@ -12,12 +13,15 @@ DRIVERS= 	gpio_11xx_2.c \
 			ring_buffer.c
 DRIVERS_SRC=$(addprefix $(CHIP_SRC)/, $(DRIVERS)) 
 
-ASOURCES=$(shell find -L $(SRCDIR) -name '*.s')
+ASOURCES=$(shell find -L $(SRCDIR) -name '*.S')
+ASOURCES+=$(STARTUP)
 CSOURCESI=$(shell find -L $(SRCDIR) -name '*.c')
 CSOURCES=$(CSOURCESI) $(DRIVERS_SRC)
 
-OBJECTS=$(ASOURCES:%.s=%.o)
+OBJECTS=$(ASOURCES:%.S=%.o)
 OBJECTS+=$(CSOURCES:%.c=%.o)
+
+
 
 BINELF=outp.elf
 BINHEX=outp.hex
@@ -55,7 +59,7 @@ $(BINDIR)/$(BINHEX): $(BINDIR)/$(BINELF)
 	@echo "Objcopy from ELF to IHEX complete!\n"
 
 $(BINDIR)/$(BINELF): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(CC) $(OBJECTS) $(LFLAGS) -o $@
 	@echo "Linking complete!\n"
 	$(SIZE) $(BINDIR)/$(BINELF)
 
@@ -63,7 +67,7 @@ $(BINDIR)/$(BINELF): $(OBJECTS)
 	$(CC) $(CFLAGS) $< -o $@
 	@echo "Compiled "$<"!\n"
 
-%.o: %.s
+%.o: %.S
 	$(CC) $(CFLAGS) $< -o $@
 	@echo "Assambled "$<"!\n"
 
