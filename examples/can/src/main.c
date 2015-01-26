@@ -14,7 +14,7 @@ int main(void)
 	// Second Paramter says no interrupts
 	LPC_CCAN_API->init_can(&CanApiClkInitTable[0], 0);
 
-	CAN_MSG_OBJ msg_obj;
+	CCAN_MSG_OBJ_T msg_obj;
 
 	//Set message object 1 to recieve all 11-bit messages 0x300-0x3FF
 	msg_obj.msgobj = 1;

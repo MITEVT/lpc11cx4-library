@@ -1,32 +1,86 @@
 NXP_BASE=../..
 
+###
+# Directory Structure
+BINDIR=bin
+SRCDIR=src
+BUILDDIR=build
+
+DRIVERS= 	gpio_11xx_2.c \
+			sysctl_11xx.c \
+			uart_11xx.c \
+			clock_11xx.c \
+			ring_buffer.c
+
+DRIVERS_SRC=$(addprefix $(CHIP_SRC)/, $(DRIVERS)) 
+
+ASOURCES=$(shell find -L $(SRCDIR) -name '*.S')
+ASOURCES+=$(STARTUP)
+CSOURCESI=$(shell find -L $(SRCDIR) -name '*.c')
+CSOURCES=$(CSOURCESI) $(DRIVERS_SRC)
+
+OBJECTS=$(ASOURCES:%.S=%.o)
+OBJECTS+=$(CSOURCES:%.c=%.o)
+
+
+
+BINELF=outp.elf
+BINHEX=outp.hex
+
 include $(NXP_BASE)/makefile.conf
-NAME=main
 
 STARTUP_DEFS=-D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
 
+
 # Need following option for LTO as LTO will treat retarget functions as
 # unused without following option
-CFLAGS+=-fno-builtin
+CFLAGS+=-fno-builtin -DCORE_M0
 
 LDSCRIPTS=-L. -L $(NXP_BASE)/ldscripts -T gcc.ld
 
-# Driver code
-INC_DRIVER= -I$(NXP_BASE)/Drivers/inc/CANopen/ -I$(NXP_BASE)/Drivers/src/CANopen/
+INC = $(CHIP_INC)
 
-INC = $(INC_DRIVER) $(INC_DEVICE)
+DEFINE= -DCORE_M0
+CFLAGS= -c $(MCFLAGS) $(INC) $(DEFINE) $(USE_NOHOST)
 
 LFLAGS=$(USE_NANO) $(USE_NOHOST) $(LDSCRIPTS) $(GC) $(MAP)
 
-TARGET=main-CM0
 
-all: $(TARGET).hex
+# System code
+SYSTEM=sysinit.c
 
-%.hex: %.axf
-	arm-none-eabi-objcopy -O ihex $^ $@;
+all: release
 
-$(NAME)-$(CORE).axf: $(NAME).c $(STARTUP) $(SYSTEM)
-	$(CC) $^ $(CFLAGS) $(INC) $(LFLAGS) -o $@
+release: $(BINDIR)/$(BINHEX)
+
+$(BINDIR)/$(BINHEX): $(BINDIR)/$(BINELF)
+	$(CP) -O ihex $< $@
+	@echo "Objcopy from ELF to IHEX complete!\n"
+
+$(BINDIR)/$(BINELF): $(OBJECTS)
+	$(CC) $(OBJECTS) $(LFLAGS) -o $@
+	@echo "Linking complete!\n"
+	$(SIZE) $(BINDIR)/$(BINELF)
+
+%.o: %.c $(STARTUP)
+	$(CC) $(CFLAGS) $< -o $@
+	@echo "Compiled "$<"!\n"
+
+%.o: %.S
+	$(CC) $(CFLAGS) $< -o $@
+	@echo "Assambled "$<"!\n"
 
 clean:
-	rm -f *.axf *.map *.o *.hex
+	rm -f $(OBJECTS) $(BINDIR)/$(BINELF) $(BINDIR)/$(BINHEX) $(BINDIR)/output.map
+
+
+# all: $(TARGET).hex
+
+# %.hex: %.axf
+# 	arm-none-eabi-objcopy -O ihex $^ $@;
+
+# $(NAME)-$(CORE).axf: $(NAME).c $(STARTUP) $(SYSTEM) $(DRIVERS_LIB)
+# 	$(CC) $^ $(CFLAGS) $(INC) $(LFLAGS) -o $@
+
+# clean:
+# 	rm -f *.axf *.map *.o *.hex
