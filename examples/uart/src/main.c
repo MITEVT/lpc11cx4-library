@@ -43,7 +43,7 @@ int main(void)
 
 	Chip_UART_Init(LPC_USART);
 	Chip_UART_SetBaud(LPC_USART, 9600);
-	Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT));
+	Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT | UART_LCR_PARITY_DIS));
 	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
 	Chip_UART_TXEnable(LPC_USART);
 
@@ -59,7 +59,7 @@ int main(void)
 
 	while(1) {
 		LED_On();
-		Chip_UART_SendBlocking(LPC_USART, string, 13);
+		Chip_UART_SendBlocking(LPC_USART, string, 14);
 		Delay(1000);
 		LED_Off();
 		Delay(1000);
