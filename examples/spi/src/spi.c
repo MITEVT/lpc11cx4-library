@@ -42,7 +42,7 @@ static void Buffer_Init(void)
 	uint8_t ch = 0;
 
 	for (i = 0; i < BUFFER_SIZE; i++) {
-		Tx_Buf[i] = ch++;
+		Tx_Buf[i] = 0x01;
 		Rx_Buf[i] = 0xAA;
 	}
 }
@@ -95,10 +95,12 @@ int main(void)
 
 	LED_On();
 
-
+	int i;
 
 	while (1) {
 		Chip_SSP_WriteFrames_Blocking(LPC_SSP, Tx_Buf, BUFFER_SIZE);
+		for(i=0; i< 0xFFFF; i++);
+
 	}
 	return 0;
 }
