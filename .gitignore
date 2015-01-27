@@ -34,4 +34,4 @@
 *.map
 
 # Build Directories
-*/bin
+**/bin/
