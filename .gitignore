@@ -3,6 +3,9 @@
 *.ko
 *.obj
 *.elf
+*.d
+*.lst
+*.dmp
 
 # Precompiled Headers
 *.gch
@@ -29,3 +32,6 @@
 *.hex
 *.axf
 *.map
+
+# Build Directories
+*/bin
