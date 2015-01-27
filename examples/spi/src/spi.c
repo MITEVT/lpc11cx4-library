@@ -81,6 +81,7 @@ int main(void)
 	/* SSP initialization */
 	Init_SSP_PinMux();
 	Chip_SSP_Init(LPC_SSP);
+	Chip_SSP_SetBitRate(LPC_SSP, 30000);
 
 	ssp_format.frameFormat = SSP_FRAMEFORMAT_SPI;
 	ssp_format.bits = SSP_DATA_BITS;
