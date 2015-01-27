@@ -42,6 +42,13 @@ CFLAGS= -c $(MCFLAGS) $(INC) $(DEFINE) $(USE_NOHOST)
 LFLAGS=$(USE_NANO) $(USE_NOHOST) $(LDSCRIPTS) $(GC) $(MAP)
 
 
+COMPORT=/dev/tty.usbserial-FTH7MMTD
+
+BAUDRATE = 115200
+
+OSC = 12000
+
+
 # System code
 SYSTEM=sysinit.c
 
@@ -67,6 +74,9 @@ $(BINDIR)/$(BINELF): $(OBJECTS)
 %.o: %.S
 	$(CC) $(CFLAGS) $< -o $@
 	@echo "Assambled "$<"!\n"
+
+writeflash: $(BINDIR)/$(BINHEX)
+	lpc21isp -NXPARM $^ $(COMPORT) $(BAUDRATE) $(OSC)
 
 clean:
 	rm -f $(OBJECTS) $(BINDIR)/$(BINELF) $(BINDIR)/$(BINHEX) $(BINDIR)/output.map
