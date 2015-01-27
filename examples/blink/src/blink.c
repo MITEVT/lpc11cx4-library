@@ -1,5 +1,6 @@
 #include "chip.h"
 
+const uint32_t OscRateIn = 12000000;
 
 #define LED_PIN 7
 
