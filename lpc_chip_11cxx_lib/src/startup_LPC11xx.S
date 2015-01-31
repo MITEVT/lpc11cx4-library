@@ -95,7 +95,7 @@ __isr_vector:
     .long   WAKEUP_IRQHandler           /* 16+10: Wakeup PIO0.10         */
     .long   WAKEUP_IRQHandler           /* 16+11: Wakeup PIO0.11         */
     .long   WAKEUP_IRQHandler           /* 16+12: Wakeup PIO1.0          */
-    .long   0             				/* 16+13: Reserved               */
+    .long   CAN_IRQHandler             	/* 16+13: CAN Handler            */
     .long   SSP1_IRQHandler        		/* 16+14: SSP1 Handler			 */
     .long   I2C_IRQHandler		        /* 16+15: I2C Handler			 */
     .long   TIMER16_0_IRQHandler        /* 16+16: 16-bit Counter-Timer 0 */
@@ -193,6 +193,7 @@ Default_Handler:
     .endm
 
     IRQ     WAKEUP_IRQHandler
+    IRQ     CAN_IRQHandler
     IRQ     SSP1_IRQHandler
     IRQ		I2C_IRQHandler
     IRQ     TIMER16_0_IRQHandler

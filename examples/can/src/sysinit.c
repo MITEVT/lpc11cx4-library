@@ -136,9 +136,9 @@
 #define SYSOSCCTRL_Val        0x0
 #define WDTOSC_SETUP          0
 #define WDTOSCCTRL_Val        0xA0
-#define SYSPLLCLKSEL_Val      0x1
+#define SYSPLLCLKSEL_Val      0x0
 #define SYSPLL_SETUP          1
-#define SYSPLLCTRL_Val        0x23
+#define SYSPLLCTRL_Val        0x61
 #define MAINCLKSEL_Val        0x1
 #define SYSAHBCLKDIV_Val      0x1
 #define AHBCLKCTRL_Val        0x1005F
@@ -325,87 +325,87 @@ uint32_t SystemCoreClock = __SYSTEM_CLOCK;/*!< System Clock Frequency (Core Cloc
 /*----------------------------------------------------------------------------
   Clock functions
  *----------------------------------------------------------------------------*/
-void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
-{
-  uint32_t wdt_osc = 0;
+// void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
+// {
+//   uint32_t wdt_osc = 0;
 
-  /* Determine clock frequency according to clock register values             */
-  switch ((LPC_SYSCTL->WDTOSCCTRL >> 5) & 0xF) {
-    case 0:  wdt_osc =  400000; break;
-    case 1:  wdt_osc =  500000; break;
-    case 2:  wdt_osc =  800000; break;
-    case 3:  wdt_osc = 1100000; break;
-    case 4:  wdt_osc = 1400000; break;
-    case 5:  wdt_osc = 1600000; break;
-    case 6:  wdt_osc = 1800000; break;
-    case 7:  wdt_osc = 2000000; break;
-    case 8:  wdt_osc = 2200000; break;
-    case 9:  wdt_osc = 2400000; break;
-    case 10: wdt_osc = 2600000; break;
-    case 11: wdt_osc = 2700000; break;
-    case 12: wdt_osc = 2900000; break;
-    case 13: wdt_osc = 3100000; break;
-    case 14: wdt_osc = 3200000; break;
-    case 15: wdt_osc = 3400000; break;
-  }
-  wdt_osc /= ((LPC_SYSCTL->WDTOSCCTRL & 0x1F) << 1) + 2;
+//   /* Determine clock frequency according to clock register values             */
+//   switch ((LPC_SYSCTL->WDTOSCCTRL >> 5) & 0xF) {
+//     case 0:  wdt_osc =  400000; break;
+//     case 1:  wdt_osc =  500000; break;
+//     case 2:  wdt_osc =  800000; break;
+//     case 3:  wdt_osc = 1100000; break;
+//     case 4:  wdt_osc = 1400000; break;
+//     case 5:  wdt_osc = 1600000; break;
+//     case 6:  wdt_osc = 1800000; break;
+//     case 7:  wdt_osc = 2000000; break;
+//     case 8:  wdt_osc = 2200000; break;
+//     case 9:  wdt_osc = 2400000; break;
+//     case 10: wdt_osc = 2600000; break;
+//     case 11: wdt_osc = 2700000; break;
+//     case 12: wdt_osc = 2900000; break;
+//     case 13: wdt_osc = 3100000; break;
+//     case 14: wdt_osc = 3200000; break;
+//     case 15: wdt_osc = 3400000; break;
+//   }
+//   wdt_osc /= ((LPC_SYSCTL->WDTOSCCTRL & 0x1F) << 1) + 2;
 
-  switch (LPC_SYSCTL->MAINCLKSEL & 0x3) {
-    case 0:                             /* Internal RC oscillator             */
-      SystemCoreClock = __IRC_OSC_CLK;
-      break;
-    case 1:                             /* Input Clock to System PLL          */
-      switch (LPC_SYSCTL->SYSPLLCLKSEL & 0x3) {
-          case 0:                       /* Internal RC oscillator             */
-            SystemCoreClock = __IRC_OSC_CLK;
-            break;
-          case 1:                       /* System oscillator                  */
-            SystemCoreClock = __SYS_OSC_CLK;
-            break;
-          case 2:                       /* WDT Oscillator                     */
-            SystemCoreClock = wdt_osc;
-            break;
-          case 3:                       /* Reserved                           */
-            SystemCoreClock = 0;
-            break;
-      }
-      break;
-    case 2:                             /* WDT Oscillator                     */
-      SystemCoreClock = wdt_osc;
-      break;
-    case 3:                             /* System PLL Clock Out               */
-      switch (LPC_SYSCTL->SYSPLLCLKSEL & 0x3) {
-          case 0:                       /* Internal RC oscillator             */
-            if (LPC_SYSCTL->SYSPLLCTRL & 0x180) {
-              SystemCoreClock = __IRC_OSC_CLK;
-            } else {
-              SystemCoreClock = __IRC_OSC_CLK * ((LPC_SYSCTL->SYSPLLCTRL & 0x1F) + 1);
-            }
-            break;
-          case 1:                       /* System oscillator                  */
-            if (LPC_SYSCTL->SYSPLLCTRL & 0x180) {
-              SystemCoreClock = __SYS_OSC_CLK;
-            } else {
-              SystemCoreClock = __SYS_OSC_CLK * ((LPC_SYSCTL->SYSPLLCTRL & 0x1F) + 1);
-            }
-            break;
-          case 2:                       /* WDT Oscillator                     */
-            if (LPC_SYSCTL->SYSPLLCTRL & 0x180) {
-              SystemCoreClock = wdt_osc;
-            } else {
-              SystemCoreClock = wdt_osc * ((LPC_SYSCTL->SYSPLLCTRL & 0x1F) + 1);
-            }
-            break;
-          case 3:                       /* Reserved                           */
-            SystemCoreClock = 0;
-            break;
-      }
-      break;
-  }
+//   switch (LPC_SYSCTL->MAINCLKSEL & 0x3) {
+//     case 0:                             /* Internal RC oscillator             */
+//       SystemCoreClock = __IRC_OSC_CLK;
+//       break;
+//     case 1:                             /* Input Clock to System PLL          */
+//       switch (LPC_SYSCTL->SYSPLLCLKSEL & 0x3) {
+//           case 0:                       /* Internal RC oscillator             */
+//             SystemCoreClock = __IRC_OSC_CLK;
+//             break;
+//           case 1:                       /* System oscillator                  */
+//             SystemCoreClock = __SYS_OSC_CLK;
+//             break;
+//           case 2:                       /* WDT Oscillator                     */
+//             SystemCoreClock = wdt_osc;
+//             break;
+//           case 3:                       /* Reserved                           */
+//             SystemCoreClock = 0;
+//             break;
+//       }
+//       break;
+//     case 2:                             /* WDT Oscillator                     */
+//       SystemCoreClock = wdt_osc;
+//       break;
+//     case 3:                             /* System PLL Clock Out               */
+//       switch (LPC_SYSCTL->SYSPLLCLKSEL & 0x3) {
+//           case 0:                       /* Internal RC oscillator             */
+//             if (LPC_SYSCTL->SYSPLLCTRL & 0x180) {
+//               SystemCoreClock = __IRC_OSC_CLK;
+//             } else {
+//               SystemCoreClock = __IRC_OSC_CLK * ((LPC_SYSCTL->SYSPLLCTRL & 0x1F) + 1);
+//             }
+//             break;
+//           case 1:                       /* System oscillator                  */
+//             if (LPC_SYSCTL->SYSPLLCTRL & 0x180) {
+//               SystemCoreClock = __SYS_OSC_CLK;
+//             } else {
+//               SystemCoreClock = __SYS_OSC_CLK * ((LPC_SYSCTL->SYSPLLCTRL & 0x1F) + 1);
+//             }
+//             break;
+//           case 2:                       /* WDT Oscillator                     */
+//             if (LPC_SYSCTL->SYSPLLCTRL & 0x180) {
+//               SystemCoreClock = wdt_osc;
+//             } else {
+//               SystemCoreClock = wdt_osc * ((LPC_SYSCTL->SYSPLLCTRL & 0x1F) + 1);
+//             }
+//             break;
+//           case 3:                       /* Reserved                           */
+//             SystemCoreClock = 0;
+//             break;
+//       }
+//       break;
+//   }
 
-  SystemCoreClock /= LPC_SYSCTL->SYSAHBCLKDIV;
+//   SystemCoreClock /= LPC_SYSCTL->SYSAHBCLKDIV;
 
-}
+// }
 
 /**
  * Initialize the system
