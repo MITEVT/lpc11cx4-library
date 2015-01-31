@@ -40,16 +40,17 @@
 #define LED_PIN 7
 #define LED_PIN2 0
 
+#define BUFFER_SIZE 8
+
 const uint32_t OscRateIn = 12000000;
 
 CCAN_MSG_OBJ_T msg_obj;
 
-uint8_t message_received = 0;
-uint32_t id;
-uint8_t data[8];
-uint8_t dlc;
-
 volatile uint32_t msTicks;
+
+STATIC RINGBUFF_T rx_buffer;
+CCAN_MSG_OBJ_T _rx_buffer[8];
+
 
 /*****************************************************************************
  * Public types/enumerations/variables
@@ -184,54 +185,24 @@ void CAN_rx(uint8_t msg_obj_num) {
 	// LED_On();
 	/* Determine which CAN message has been received */
 	msg_obj.msgobj = msg_obj_num;
-
 	/* Now load up the msg_obj structure with the CAN message */
 	LPC_CCAN_API->can_receive(&msg_obj);
-	char num[2];
-	itoa((int)msg_obj_num, num, 10);
-	// int i;
-	// for(i = 0; i < 0xFF; i++);
-	// LED_Off();
-	// if (msg_obj_num == 1) {
-	// 	/* Simply transmit CAN frame (echo) with with ID +0x100 via buffer 2 */
-	// 	// msg_obj.msgobj = 2;
-	// 	// msg_obj.mode_id += 0x100;
-	// 	// LPC_CCAN_API->can_transmit(&msg_obj);
-	// 	id = msg_obj.mode_id;
-	// 	data[8] = msg_obj.data;
-	// 	dlc = msg_obj.dlc;
-	// 	message_received = 1;
-	// } 
-	Chip_UART_SendBlocking(LPC_USART, "Message Re\n", 11);
-	// Delay(1);
-	Chip_UART_SendBlocking(LPC_USART, num, 2);
-
-	char *s = "Passed Delay\n";
-	Chip_UART_SendBlocking(LPC_USART, s, 14);
-	msg_obj.msgobj = 2;
-	msg_obj.mode_id += 0x100;
-	LPC_CCAN_API->can_transmit(&msg_obj);
-	s = "Message Sent\n";
-	Chip_UART_SendBlocking(LPC_USART, s, 17);
+	if (msg_obj_num == 1) {
+		RingBuffer_Insert(&rx_buffer, &msg_obj);
+	}
 }
 
 /*	CAN transmit callback */
 /*	Function is executed by the Callback handler after
     a CAN message has been transmitted */
-void CAN_tx(uint8_t msg_obj_num) {
-	char *t = "T\n";
-	Chip_UART_SendBlocking(LPC_USART, t, 3);
-}
+void CAN_tx(uint8_t msg_obj_num) {}
 
-
-char *error = "Error\n";
 /*	CAN error callback */
 /*	Function is executed by the Callback handler after
     an error has occured on the CAN bus */
 void CAN_error(uint32_t error_info) {
 	LED2_On();
-	Chip_UART_SendBlocking(LPC_USART, error, 7);
-
+	Chip_UART_SendBlocking(LPC_USART, "Error\n", 7);
 }
 
 /**
@@ -277,6 +248,17 @@ int main(void)
 	Chip_UART_TXEnable(LPC_USART);
 	//---------------
 
+	char *startMessage = "Started Up\n";
+	Chip_UART_SendBlocking(LPC_USART, startMessage, 12);
+
+	//---------------
+	//Ring Buffer
+
+	RingBuffer_Init(&rx_buffer, _rx_buffer, 11, 8);
+	RingBuffer_Flush(&rx_buffer);
+
+	//---------------
+
 	uint32_t CanApiClkInitTable[2];
 	/* Publish CAN Callback Functions */
 	CCAN_CALLBACKS_T callbacks = {
@@ -289,7 +271,6 @@ int main(void)
 		NULL,
 		NULL,
 	};
-	SystemCoreClockUpdate();
 	baudrateCalculate(TEST_CCAN_BAUD_RATE, CanApiClkInitTable);
 
 	LPC_CCAN_API->init_can(&CanApiClkInitTable[0], TRUE);
@@ -298,48 +279,21 @@ int main(void)
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
 
-	/* Send a simple one time CAN message */
-	// msg_obj.msgobj  = 0;
-	// msg_obj.mode_id = 0x145;
-	// msg_obj.mask    = 0x0;
-	// msg_obj.dlc     = 4;
-	// msg_obj.data[0] = 'T';	// 0x54
-	// msg_obj.data[1] = 'E';	// 0x45
-	// msg_obj.data[2] = 'S';	// 0x53
-	// msg_obj.data[3] = 'T';	// 0x54
-	// LPC_CCAN_API->can_transmit(&msg_obj);
-
-	/* Configure message object 1 to receive all 11-bit messages 0x050-0x050 */
+	/* Configure message object 1 to receive all 11-bit messages */
 	msg_obj.msgobj = 1;
-	msg_obj.mode_id = 0x050;
-	msg_obj.mask = 0xFFF;
+	msg_obj.mode_id = 0x000;
+	msg_obj.mask = 0x000;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
-
-	char *space = " ";
-	char *p = "Message Received\n";
 
 	LED_Off();
 	LED2_Off();
 
-	char *startMessage = "Started Up\n";
-	Chip_UART_SendBlocking(LPC_USART, startMessage, 12);
 	while (1) {
-
-
-
-		//__WFI();	/* Go to Sleep */
-		// if (message_received) {
-		// 	message_received = 0;
-		// 	msg_obj.msgobj  = 0;
-		// 	msg_obj.mode_id = 0x145;
-		// 	msg_obj.mask    = 0x0;
-		// 	msg_obj.dlc     = 4;
-		// 	msg_obj.data[0] = 'T';	// 0x54
-		// 	msg_obj.data[1] = 'E';	// 0x45
-		// 	msg_obj.data[2] = 'S';	// 0x53
-		// 	msg_obj.data[3] = 'T';	// 0x54
-		// 	LPC_CCAN_API->can_transmit(&msg_obj);
-		// }
-		
+		__WFI();	/* Go to Sleep */
+		if (!RingBuffer_IsEmpty(&rx_buffer)) {
+			CCAN_MSG_OBJ_T temp_msg;
+			RingBuffer_Pop(&rx_buffer, &temp_msg);
+			Chip_UART_SendBlocking(LPC_USART, "Received Message\n", 18);
+		}	
 	}
 }
