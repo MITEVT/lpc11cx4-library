@@ -254,7 +254,7 @@ int main(void)
 	//---------------
 	//Ring Buffer
 
-	RingBuffer_Init(&rx_buffer, _rx_buffer, 11, 8);
+	RingBuffer_Init(&rx_buffer, _rx_buffer, sizeof(CCAN_MSG_OBJ_T), 8);
 	RingBuffer_Flush(&rx_buffer);
 
 	//---------------
