@@ -2,7 +2,7 @@
 
 const uint32_t OscRateIn = 12000000;
 
-#define LED_PIN 7
+#define LED_PIN 9
 
 volatile uint32_t msTicks;
 
@@ -21,16 +21,16 @@ __INLINE static void GPIO_Config(void) {
 }
 
 __INLINE static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 0, LED_PIN, true);
+	Chip_GPIO_WriteDirBit(LPC_GPIO, 2, LED_PIN, true);
 
 }
 
 __INLINE static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, true);
+	Chip_GPIO_SetPinState(LPC_GPIO, 2, LED_PIN, true);
 }
 
 __INLINE static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, false);
+	Chip_GPIO_SetPinState(LPC_GPIO, 2, LED_PIN, false);
 }
 
 int main (void) {
