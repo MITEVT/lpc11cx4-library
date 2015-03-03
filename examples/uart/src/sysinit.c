@@ -132,11 +132,11 @@
 */
 #define CLOCK_SETUP           1
 #define SYSCLK_SETUP          1
-#define SYSOSC_SETUP          1
+#define SYSOSC_SETUP          0
 #define SYSOSCCTRL_Val        0x0
 #define WDTOSC_SETUP          0
 #define WDTOSCCTRL_Val        0xA0
-#define SYSPLLCLKSEL_Val      0x1
+#define SYSPLLCLKSEL_Val      0x0
 #define SYSPLL_SETUP          1
 #define SYSPLLCTRL_Val        0x23
 #define MAINCLKSEL_Val        0x1

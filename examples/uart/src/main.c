@@ -1,10 +1,18 @@
+/**************************
+* 	UART Echo Example     *
+* 	Echoes out input      *
+***************************/
+
+
 #include "chip.h"
 
-const uint32_t OscRateIn = 12000000;
+const uint32_t OscRateIn = 0000000;
 
 #define LED_PIN 7
 
 volatile uint32_t msTicks;
+
+uint8_t Rx_Buf[8];
 
 void SysTick_Handler(void) {
 	msTicks++;
@@ -47,7 +55,7 @@ int main(void)
 	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
 	Chip_UART_TXEnable(LPC_USART);
 
-	const uint8_t *string = "Hello World\n\0";
+	const uint8_t *string = "Hello World\n\r";
 
 	if (SysTick_Config (SystemCoreClock / 1000)) {
 		//Error
@@ -56,13 +64,13 @@ int main(void)
 
 	GPIO_Config();
 	LED_Config();
+	LED_On();
 
 	while(1) {
-		LED_On();
-		Chip_UART_SendBlocking(LPC_USART, string, 14);
-		Delay(1000);
-		LED_Off();
-		Delay(1000);
+		uint8_t count;
+		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0) {
+			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
+		}
 	}
 
 	return 0;
