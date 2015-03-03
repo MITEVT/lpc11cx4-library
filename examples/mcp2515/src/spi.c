@@ -14,10 +14,10 @@ const uint32_t OscRateIn = 0;
 
 #define CLKOUT_DIV 2
 
-#define LED_GPIO 0
-#define LED_PIN 7
+#define LED_GPIO 2
+#define LED_PIN 10
 
-#define CHIP_SELECT_GPIO 0
+#define CHIP_SELECT_GPIO 2
 #define CHIP_SELECT_PIN 2
 
 #define set_gpio_pin_output(gpio, pin) (Chip_GPIO_WriteDirBit(LPC_GPIO, gpio, pin, true))
@@ -92,7 +92,7 @@ int main(void)
 	// MCP2515
 
 	MCP2515_Init(CHIP_SELECT_GPIO, CHIP_SELECT_PIN);
-	uint8_t i = MCP2515_SetBitRate(500, 11, 2);
+	uint8_t i = MCP2515_SetBitRate(500, 11, 1);
 	itoa(i, str, 10);
 	if (i) {
 		Chip_UART_SendBlocking(LPC_USART, "Baud Error: ", 12);
@@ -102,47 +102,35 @@ int main(void)
 
 	//---------------
 
-	char *startMessage = "Started Up\n\r";
-	Chip_UART_SendBlocking(LPC_USART, startMessage, 12);
+	Chip_UART_SendBlocking(LPC_USART, "Started Up!\n\r", 13);
 
-	MCP2515_BitModify(CANCTRL, MODE_MASK | CLKEN_MASK | CLKPRE_MASK, MODE_LOOPBACK | CLKEN_ENABLE | CLKPRE_CLKDIV_1);
+	MCP2515_BitModify(CANCTRL, MODE_MASK | CLKEN_MASK | CLKPRE_MASK, MODE_NORMAL | CLKEN_ENABLE | CLKPRE_CLKDIV_1);
 
 	MCP2515_BitModify(RXB0CTRL, RXM_MASK, RXM_OFF);
 
-	msgobj.mode_id = 0x300;
-	msgobj.dlc = 1;
+	msgobj.mode_id = 0x600;
+	msgobj.dlc = 6;
 	msgobj.data[0] = 0xAA;
+	msgobj.data[1] = 0xAA;
+	msgobj.data[2] = 0xAA;
+	msgobj.data[3] = 0xAA;
+	msgobj.data[4] = 0xAA;
+	msgobj.data[5] = 0xAA;
 
 	MCP2515_LoadBuffer(0, &msgobj);
 
-	MCP2515_SendBuffer(0);
+	// MCP2515_SendBuffer(0);
 
-	msgobj.mode_id = 0;
+	// msgobj.mode_id = 0;
 
-	MCP2515_ReadBuffer(&msgobj, 0);
+	// MCP2515_ReadBuffer(&msgobj, 0);
 
-	if (msgobj.mode_id = 0x300) {
-		Chip_UART_SendBlocking(LPC_USART, "Received Message\r\n", 18);
-	}
+	// Chip_UART_SendBlocking(LPC_USART, "Read Buf\n\r", 10);
 
-	uint8_t tmp = 0;
-	MCP2515_Read(CANINTF, &tmp, 1);
-	uint8ToASCIIHex(tmp, str);
-	Chip_UART_SendBlocking(LPC_USART, "CANINTF: 0x", 11);
-	Chip_UART_SendBlocking(LPC_USART, str, 2);
-	Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+	// if (msgobj.mode_id = 0x600) {
+	// 	Chip_UART_SendBlocking(LPC_USART, "Received Message\r\n", 18);
+	// }
 
-	MCP2515_Read(EFLG, &tmp, 1);
-	uint8ToASCIIHex(tmp, str);
-	Chip_UART_SendBlocking(LPC_USART, "EFLG: 0x", 8);
-	Chip_UART_SendBlocking(LPC_USART, str, 2);
-	Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
-
-	MCP2515_Read(TEC, &tmp, 1);
-	itoa(tmp, str, 10);
-	Chip_UART_SendBlocking(LPC_USART, "TEC: ", 5);
-	Chip_UART_SendBlocking(LPC_USART, str, 4);
-	Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
  
 
 	// Chip_GPIO_SetPinState(LPC_GPIO, CHIP_SELECT_GPIO, CHIP_SELECT_PIN, false);
@@ -156,6 +144,56 @@ int main(void)
 
 	while (1) {
 
+		// MCP2515_SendBuffer(0);
+
+		uint8_t tmp = 0;
+
+		// MCP2515_Read(TEC, &tmp, 1);
+		// itoa(tmp, str, 10);
+		// Chip_UART_SendBlocking(LPC_USART, "TEC: ", 5);
+		// Chip_UART_SendBlocking(LPC_USART, str, 4);
+		// Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+
+		// MCP2515_Read(EFLG, &tmp, 1);
+		// uint8ToASCIIHex(tmp, str);
+		// Chip_UART_SendBlocking(LPC_USART, "EFLG: 0x", 8);
+		// Chip_UART_SendBlocking(LPC_USART, str, 2);
+		// Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+
+		
+		MCP2515_Read(CANINTF, &tmp, 1);
+		uint8ToASCIIHex(tmp, str);
+		// Chip_UART_SendBlocking(LPC_USART, "CANINTF: 0x", 11);
+		// Chip_UART_SendBlocking(LPC_USART, str, 2);
+		// Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+
+		if (tmp & 1) { //Receive buffer 0 full
+			Chip_UART_SendBlocking(LPC_USART, "CANINTF: 0x", 11);
+			Chip_UART_SendBlocking(LPC_USART, str, 2);
+			Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+
+			MCP2515_ReadBuffer(&msgobj, 0);
+			Chip_UART_SendBlocking(LPC_USART, "Mode ID: 0x", 11);
+			itoa(msgobj.mode_id, str, 16);
+			Chip_UART_SendBlocking(LPC_USART, str, 4);
+			Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+			Chip_UART_SendBlocking(LPC_USART, "DLC: ", 5);
+			itoa(msgobj.dlc, str, 10);
+			Chip_UART_SendBlocking(LPC_USART, str, 2);
+			Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+
+			MCP2515_Read(EFLG, &tmp, 1);
+			uint8ToASCIIHex(tmp, str);
+			Chip_UART_SendBlocking(LPC_USART, "EFLG: 0x", 8);
+			Chip_UART_SendBlocking(LPC_USART, str, 2);
+			Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+
+			MCP2515_Read(TEC, &tmp, 1);
+			itoa(tmp, str, 10);
+			Chip_UART_SendBlocking(LPC_USART, "TEC: ", 5);
+			Chip_UART_SendBlocking(LPC_USART, str, 4);
+			Chip_UART_SendBlocking(LPC_USART, "\n\r", 2);
+		}
 	}
 	return 0;
 }

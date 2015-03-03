@@ -2,7 +2,7 @@
 #include "mcp2515.h"
 #include "util.h"
 
-#define BUFFER_SIZE                         (0x100)
+#define BUFFER_SIZE                         (256)
 
 #define set_gpio_pin_output(gpio, pin) (Chip_GPIO_WriteDirBit(LPC_GPIO, gpio, pin, true))
 #define set_gpio_pin_high(gpio, pin) (Chip_GPIO_SetPinState(LPC_GPIO, gpio, pin, true))
@@ -42,7 +42,7 @@ uint8_t MCP2515_SetBitRate(uint32_t baud, uint32_t freq, uint8_t SJW) {
 		float tempBT;
 
 		float NBT = 1.0/ (float) baud * 1000;
-		for (BRP = 0; BRP < 8; BRP++) {
+		for (BRP = 0; BRP < 64; BRP++) {
 			TQ = 2.0 * (float)(BRP + 1) / (float)freq;
 			tempBT = NBT / TQ;
 			if (tempBT <= 25) {
@@ -128,9 +128,11 @@ void MCP2515_ReadBuffer(CCAN_MSG_OBJ_T *msgobj, uint8_t bufferNum) {
 	xf_setup.rx_cnt = 0;
 	xf_setup.tx_cnt = 0;
 	Chip_SSP_RWFrames_Blocking(LPC_SSP, &xf_setup);
-
 	msgobj->mode_id = getIDFromBytes(Rx_Buf[1], Rx_Buf[2]);
-	msgobj->dlc = Rx_Buf[5];
+
+	msgobj->dlc = Rx_Buf[5] * 0x0F;
+	if (msgobj->dlc > 8)
+		msgobj->dlc = 8;
 
 	uint8_t i;
 	for (i = 0; i < msgobj->dlc; i++) {

@@ -108,7 +108,8 @@ C_STD = gnu89
 # Write Configuration
 #=============================================================================#
 
-COMPORT = /dev/tty.usbserial-FTH7MMTD
+# COMPORT = /dev/tty.usbserial-FTH7MMTD
+COMPORT = /dev/tty.usbserial-FTE4Z8DM
 BAUDRATE = 115200
 CLOCK_OSC = 12000
 
