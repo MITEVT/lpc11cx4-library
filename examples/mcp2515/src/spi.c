@@ -69,8 +69,8 @@ int main(void)
 	Chip_SSP_SetMaster(LPC_SSP, true);
 	Chip_SSP_Enable(LPC_SSP);
 
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_2, (IOCON_FUNC0 | IOCON_MODE_INACT));	/* PIO0_2 */
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 0, 2, true);
+	// Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_2, (IOCON_FUNC0 | IOCON_MODE_INACT));	/* PIO0_2 */
+	// Chip_GPIO_WriteDirBit(LPC_GPIO, 0, 2, true);
 
 	// Set CLKOUT Source to be the Main Sys Clock divded by 1
 	Chip_Clock_SetCLKOUTSource(SYSCTL_CLKOUTSRC_MAINSYSCLK, CLKOUT_DIV);
