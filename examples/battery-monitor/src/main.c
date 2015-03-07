@@ -1,18 +1,30 @@
 /**************************
-* 	UART Echo Example     *
-* 	Echoes out input      *
+* 	Reads Config Input    *
+* 	for Battery System    *
 ***************************/
 
+struct Config {
+	uint8_t Series;
+	uint8_t Parallel;
+	uint8_t ModularSeries;
+	uint8_t ModularParallel;
+};
+
+typedef struct Config Config_t;
 
 #include "chip.h"
+#include <string.h>
 
 const uint32_t OscRateIn = 0000000;
 
 #define LED_PIN 7
+#define HELP_CHAR1 '?'
+#define HELP_CHAR1 'h'
+#define READ_CHAR 'r'
+#define SET_CHAR 's'
+
 
 volatile uint32_t msTicks;
-
-uint8_t Rx_Buf[8];
 
 void SysTick_Handler(void) {
 	msTicks++;
@@ -41,6 +53,17 @@ __INLINE static void LED_Off(void) {
 	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, false);
 }
 
+void print_help(void) {
+	const char *text = "Press 'r' to read the current battery settings.\n"
+						"Press 's' to set the current battery settings.\n"
+						"Press '?' or 'h' to repeat these instructions.\n\r";
+	Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
+}
+
+void print_config(Config_t *config) {
+
+}
+
 int main(void)
 {
 
@@ -55,8 +78,6 @@ int main(void)
 	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
 	Chip_UART_TXEnable(LPC_USART);
 
-	const uint8_t *string = "Hello World\n\r";
-
 	if (SysTick_Config (SystemCoreClock / 1000)) {
 		//Error
 		while(1);
@@ -67,9 +88,22 @@ int main(void)
 	LED_On();
 
 	while(1) {
-		uint8_t count;
-		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0) {
-			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
+		uint8_t bytes_read;
+		uint8_t Rx_Buf[8];
+		uint8_t init__buf;
+		const Config_t config = {0,0,0,0};
+
+		if ((bytes_read = Chip_UART_ReadBlocking(LPC_USART, init_buf, 1)) != 0) {
+			if (init_buf == HELP_CHAR1 || init_buf == HELP_CHAR2) {
+				print_help();
+			} else if (init_buf == SET_CHAR) {
+				
+			} else if (init_buf == READ_CHAR) {
+				print_config(&config);
+			} else {
+				const char *text = "Invalid character. Please try again";
+				Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
+			}
 		}
 	}
 
