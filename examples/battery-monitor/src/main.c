@@ -3,6 +3,19 @@
 * 	for Battery System    *
 ***************************/
 
+
+#include "chip.h"
+#include <string.h>
+#include <stdlib.h>
+
+#define LED_PIN 7
+#define HELP_CHAR1 '?'
+#define HELP_CHAR2 'h'
+#define READ_CHAR 'r'
+#define SET_CHAR 's'
+#define FAST_PRINT(str) Chip_UART_SendBlocking(LPC_USART, str, strlen(str))
+
+
 struct Config {
 	uint8_t series;
 	uint8_t parallel;
@@ -12,19 +25,50 @@ struct Config {
 
 typedef struct Config Config_t;
 
-#include "chip.h"
-#include <string.h>
-
 const uint32_t OscRateIn = 0000000;
 
-#define LED_PIN 7
-#define HELP_CHAR1 '?'
-#define HELP_CHAR1 'h'
-#define READ_CHAR 'r'
-#define SET_CHAR 's'
-
-
 volatile uint32_t msTicks;
+
+char* itoa(int num, char* str, int base)
+{
+    int i = 0;
+    bool isNegative = false;
+ 
+    /* Handle 0 explicitely, otherwise empty string is printed for 0 */
+    if (num == 0)
+    {
+        str[i++] = '0';
+        str[i] = '\0';
+        return str;
+    }
+ 
+    // In standard itoa(), negative numbers are handled only with 
+    // base 10. Otherwise numbers are considered unsigned.
+    if (num < 0 && base == 10)
+    {
+        isNegative = true;
+        num = -num;
+    }
+ 
+    // Process individual digits
+    while (num != 0)
+    {
+        int rem = num % base;
+        str[i++] = (rem > 9)? (rem-10) + 'a' : rem + '0';
+        num = num/base;
+    }
+ 
+    // If number is negative, append '-'
+    if (isNegative)
+        str[i++] = '-';
+ 
+    str[i] = '\0'; // Append string terminator
+ 
+    // Reverse the string
+    reverse(str, i);
+ 
+    return str;
+}
 
 void SysTick_Handler(void) {
 	msTicks++;
@@ -54,40 +98,46 @@ __INLINE static void LED_Off(void) {
 }
 
 void print_help(void) {
-	const uint8_t *text = "Press 'r' to read the current battery settings.\n"
-						"Press 's' to set the current battery settings.\n"
+	const char *text = "Press 'r' to read the current battery settings. "
+						"Press 's' to set the current battery settings. "
 						"Press '?' or 'h' to repeat these instructions.\n\r";
 	Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
 }
 
 void print_config(Config_t *config) {
 	//This is really ugly. Better way to do it?
-	uint8_t text[80];
-	strcpy(text, "Series: ");
-	strcat(text, to_string(&config.series));
-	strcpy(text, "\nParallel: ");
-	strcat(text, to_string(&config.parallel));
-	strcpy(text, "\nModular Series: ");
-	strcat(text, to_string(&config.modular_series));
-	strcpy(text, "\nModular Parallel: ");
-	strcat(text, to_string(&config.modular_parallel));
-	strcpy(text, "\n");
-	Chip_UART_SendBlocking(LPC_USART, &text, strlen(text));
+	char *container;
+
+	FAST_PRINT("Series: ");
+	//itoa(config->series, container, 10);
+	int i = 5;
+	itoa(i, container, 10);
+	FAST_PRINT(container);
+	
+	FAST_PRINT("Parallel: ");
+	itoa(config->parallel, container, 10);
+	FAST_PRINT(container);
+
+	FAST_PRINT("Modular Series: ");
+	itoa(config->modular_series, container, 10);
+	FAST_PRINT(container);
+
+	FAST_PRINT("Modular Parallel: ");
+	itoa(config->modular_parallel, container, 10);
+	FAST_PRINT(container);
 }
 
-uint8_t ask_for_input(uint8_t *question) {
+uint8_t ask_for_input(char *question) {
 
 	//Ask for value
-	Chip_UART_SendBlocking(LPC_USART, question, strlen(question));
-	uint8_t *ending = "'s value? "
-	Chip_UART_SendBlocking(LPC_USART, ending, strlen(ending));
-	*ending = "\n"
-	Chip_UART_SendBlocking(LPC_USART, ending, strlen(ending));
+	FAST_PRINT(question);
+	FAST_PRINT("'s value? ");
+	FAST_PRINT("\n");
 
-	uint8_t str_val[10] = "0";
+	char str_val[10] = "0";
 	uint8_t count = 0;
-	uint8_t read_buf;
-	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
+	char read_buf;
+	Chip_UART_ReadBlocking(LPC_USART, &read_buf, 1);
 	while (read_buf != '\n' || read_buf != '\r') {
 		str_val[count] = read_buf;
 		count++;
@@ -95,7 +145,7 @@ uint8_t ask_for_input(uint8_t *question) {
 			break;
 		}
 	}
-	return atoi(str_val);
+	return (uint8_t) atoi(str_val);
 }
 
 int main(void)
@@ -122,12 +172,10 @@ int main(void)
 	LED_On();
 
 	while(1) {
-		uint8_t bytes_read;
-		uint8_t Rx_Buf[8];
-		uint8_t init__buf;
-		const Config_t config = {0,0,0,0};
+		char init_buf;
+		Config_t config = {0,0,0,0};
 
-		Chip_UART_ReadBlocking(LPC_USART, init_buf, 1)
+		Chip_UART_ReadBlocking(LPC_USART, &init_buf, 1);
 
 		if (init_buf == HELP_CHAR1 || init_buf == HELP_CHAR2) {
 			print_help();
@@ -135,14 +183,14 @@ int main(void)
 		} else if (init_buf == SET_CHAR) {
 			config.series = ask_for_input("serial");
 			config.parallel = ask_for_input("parallel");
-			config.modular_serial = ask_for_input("modular serial");
+			config.modular_series = ask_for_input("modular serial");
 			config.modular_parallel = ask_for_input("modular parallel");
 
 		} else if (init_buf == READ_CHAR) {
 			print_config(&config);
 
 		} else {
-			const uint8_t *text = "Invalid character. Please try again";
+			const char *text = "Invalid character. Please try again. 'h' for help. \n\r";
 			Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
 		}
 	}
