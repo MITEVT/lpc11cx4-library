@@ -29,45 +29,40 @@ const uint32_t OscRateIn = 0000000;
 
 volatile uint32_t msTicks;
 
-char* itoa(int num, char* str, int base)
-{
-    int i = 0;
-    bool isNegative = false;
- 
-    /* Handle 0 explicitely, otherwise empty string is printed for 0 */
-    if (num == 0)
-    {
-        str[i++] = '0';
-        str[i] = '\0';
-        return str;
+int itoa(int value, char *sp, int radix) {
+    char tmp[16];// be careful with the length of the buffer
+    char *tp = tmp;
+    int i;
+    unsigned v;
+
+    int sign = (radix == 10 && value < 0);    
+    if (sign)
+        v = -value;
+    else
+        v = (unsigned) value;
+
+    while (v || tp == tmp) {
+        i = v % radix;
+        v /= radix; // v/=radix uses less CPU clocks than v=v/radix does
+        if (i < 10)
+          *tp++ = i+'0';
+        else
+          *tp++ = i + 'a' - 10;
     }
- 
-    // In standard itoa(), negative numbers are handled only with 
-    // base 10. Otherwise numbers are considered unsigned.
-    if (num < 0 && base == 10)
-    {
-        isNegative = true;
-        num = -num;
+
+    int len = tp - tmp;
+
+    if (sign) {
+        *sp++ = '-';
+        len++;
     }
- 
-    // Process individual digits
-    while (num != 0)
-    {
-        int rem = num % base;
-        str[i++] = (rem > 9)? (rem-10) + 'a' : rem + '0';
-        num = num/base;
-    }
- 
-    // If number is negative, append '-'
-    if (isNegative)
-        str[i++] = '-';
- 
-    str[i] = '\0'; // Append string terminator
- 
-    // Reverse the string
-    reverse(str, i);
- 
-    return str;
+
+
+    while (tp > tmp) {
+        *sp++ = *--tp;
+	}
+
+    return len;
 }
 
 void SysTick_Handler(void) {
@@ -105,26 +100,27 @@ void print_help(void) {
 }
 
 void print_config(Config_t *config) {
-	//This is really ugly. Better way to do it?
-	char *container;
+	char container[13];
 
 	FAST_PRINT("Series: ");
-	//itoa(config->series, container, 10);
-	int i = 5;
-	itoa(i, container, 10);
+	itoa(config->series, container, 10);
 	FAST_PRINT(container);
+	FAST_PRINT("\n\r");
 	
 	FAST_PRINT("Parallel: ");
 	itoa(config->parallel, container, 10);
 	FAST_PRINT(container);
+	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Series: ");
 	itoa(config->modular_series, container, 10);
 	FAST_PRINT(container);
+	FAST_PRINT(".\n\r");
 
 	FAST_PRINT("Modular Parallel: ");
 	itoa(config->modular_parallel, container, 10);
 	FAST_PRINT(container);
+	FAST_PRINT(".\n\r");
 }
 
 uint8_t ask_for_input(char *question) {
