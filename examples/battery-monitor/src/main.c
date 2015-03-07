@@ -4,10 +4,10 @@
 ***************************/
 
 struct Config {
-	uint8_t Series;
-	uint8_t Parallel;
-	uint8_t ModularSeries;
-	uint8_t ModularParallel;
+	uint8_t series;
+	uint8_t parallel;
+	uint8_t modular_series;
+	uint8_t modular_parallel;
 };
 
 typedef struct Config Config_t;
@@ -54,14 +54,48 @@ __INLINE static void LED_Off(void) {
 }
 
 void print_help(void) {
-	const char *text = "Press 'r' to read the current battery settings.\n"
+	const uint8_t *text = "Press 'r' to read the current battery settings.\n"
 						"Press 's' to set the current battery settings.\n"
 						"Press '?' or 'h' to repeat these instructions.\n\r";
 	Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
 }
 
 void print_config(Config_t *config) {
+	//This is really ugly. Better way to do it?
+	uint8_t text[80];
+	strcpy(text, "Series: ");
+	strcat(text, to_string(&config.series));
+	strcpy(text, "\nParallel: ");
+	strcat(text, to_string(&config.parallel));
+	strcpy(text, "\nModular Series: ");
+	strcat(text, to_string(&config.modular_series));
+	strcpy(text, "\nModular Parallel: ");
+	strcat(text, to_string(&config.modular_parallel));
+	strcpy(text, "\n");
+	Chip_UART_SendBlocking(LPC_USART, &text, strlen(text));
+}
 
+uint8_t ask_for_input(uint8_t *question) {
+
+	//Ask for value
+	Chip_UART_SendBlocking(LPC_USART, question, strlen(question));
+	uint8_t *ending = "'s value? "
+	Chip_UART_SendBlocking(LPC_USART, ending, strlen(ending));
+	*ending = "\n"
+	Chip_UART_SendBlocking(LPC_USART, ending, strlen(ending));
+
+	uint8_t str_val[10] = "0";
+	uint8_t count = 0;
+	uint8_t read_buf;
+	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
+	while (read_buf != '\n' || read_buf != '\r') {
+		str_val[count] = read_buf;
+		count++;
+		if (count==10) {
+			break;
+		}
+	}
+	return atoi(str_val);
 }
 
 int main(void)
@@ -93,17 +127,23 @@ int main(void)
 		uint8_t init__buf;
 		const Config_t config = {0,0,0,0};
 
-		if ((bytes_read = Chip_UART_ReadBlocking(LPC_USART, init_buf, 1)) != 0) {
-			if (init_buf == HELP_CHAR1 || init_buf == HELP_CHAR2) {
-				print_help();
-			} else if (init_buf == SET_CHAR) {
-				
-			} else if (init_buf == READ_CHAR) {
-				print_config(&config);
-			} else {
-				const char *text = "Invalid character. Please try again";
-				Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
-			}
+		Chip_UART_ReadBlocking(LPC_USART, init_buf, 1)
+
+		if (init_buf == HELP_CHAR1 || init_buf == HELP_CHAR2) {
+			print_help();
+
+		} else if (init_buf == SET_CHAR) {
+			config.series = ask_for_input("serial");
+			config.parallel = ask_for_input("parallel");
+			config.modular_serial = ask_for_input("modular serial");
+			config.modular_parallel = ask_for_input("modular parallel");
+
+		} else if (init_buf == READ_CHAR) {
+			print_config(&config);
+
+		} else {
+			const uint8_t *text = "Invalid character. Please try again";
+			Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
 		}
 	}
 
