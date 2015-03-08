@@ -108,7 +108,7 @@ C_STD = gnu89
 # Write Configuration
 #=============================================================================#
 
-COMPORT = /dev/tty.usbserial-FTH7MMTD
+COMPORT = $(word 1, $(wildcard /dev/tty.usbserial-*) $(wildcard /dev/ttyUSB*))
 BAUDRATE = 115200
 CLOCK_OSC = 12000
 
