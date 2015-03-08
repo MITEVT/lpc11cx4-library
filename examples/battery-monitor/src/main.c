@@ -100,27 +100,27 @@ void print_help(void) {
 }
 
 void print_config(Config_t *config) {
-	char container[13];
+	char container1[7], container2[7], container3[7], container4[7];
 
 	FAST_PRINT("Series: ");
-	itoa(config->series, container, 10);
-	FAST_PRINT(container);
+	itoa(config->series, container1, 10);
+	FAST_PRINT(container1);
 	FAST_PRINT("\n\r");
 	
 	FAST_PRINT("Parallel: ");
-	itoa(config->parallel, container, 10);
-	FAST_PRINT(container);
+	itoa(config->parallel, container2, 10);
+	FAST_PRINT(container2);
 	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Series: ");
-	itoa(config->modular_series, container, 10);
-	FAST_PRINT(container);
-	FAST_PRINT(".\n\r");
+	itoa(config->modular_series, container3, 10);
+	FAST_PRINT(container3);
+	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Parallel: ");
-	itoa(config->modular_parallel, container, 10);
-	FAST_PRINT(container);
-	FAST_PRINT(".\n\r");
+	itoa(config->modular_parallel, container4, 10);
+	FAST_PRINT(container4);
+	FAST_PRINT("\n\r");
 }
 
 uint8_t ask_for_input(char *question) {
@@ -128,19 +128,24 @@ uint8_t ask_for_input(char *question) {
 	//Ask for value
 	FAST_PRINT(question);
 	FAST_PRINT("'s value? ");
-	FAST_PRINT("\n");
 
-	char str_val[10] = "0";
+	char str_val[10];
 	uint8_t count = 0;
-	char read_buf;
-	Chip_UART_ReadBlocking(LPC_USART, &read_buf, 1);
-	while (read_buf != '\n' || read_buf != '\r') {
-		str_val[count] = read_buf;
+	char read_buf[1];
+	FAST_PRINT("HERE");
+	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
+	FAST_PRINT(read_buf);
+	FAST_PRINT("HERE2");
+	while (read_buf[0] != '\n' || read_buf[0] != '\r') {
+		str_val[count] = read_buf[0];
 		count++;
 		if (count==10) {
 			break;
 		}
+		Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
+		FAST_PRINT(read_buf);
 	}
+	FAST_PRINT("HERE3");
 	return (uint8_t) atoi(str_val);
 }
 
@@ -169,7 +174,7 @@ int main(void)
 
 	while(1) {
 		char init_buf;
-		Config_t config = {0,0,0,0};
+		Config_t config = {10,5,17,0};
 
 		Chip_UART_ReadBlocking(LPC_USART, &init_buf, 1);
 
