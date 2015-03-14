@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #define LED_PIN 7
+#define MAX_VAL_LEN 10
 #define HELP_CHAR1 '?'
 #define HELP_CHAR2 'h'
 #define READ_CHAR 'r'
@@ -96,29 +97,29 @@ void print_help(void) {
 	const char *text = "Press 'r' to read the current battery settings. "
 						"Press 's' to set the current battery settings. "
 						"Press '?' or 'h' to repeat these instructions.\n\r";
-	Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
+	FAST_PRINT(text);
 }
 
 void print_config(Config_t *config) {
-	char container1[7], container2[7], container3[7], container4[7];
+	char container1[MAX_VAL_LEN], container2[MAX_VAL_LEN], container3[MAX_VAL_LEN], container4[MAX_VAL_LEN];
 
 	FAST_PRINT("Series: ");
-	itoa(config->series, container1, 10);
+	itoa(config->series, container1, MAX_VAL_LEN);
 	FAST_PRINT(container1);
 	FAST_PRINT("\n\r");
 	
 	FAST_PRINT("Parallel: ");
-	itoa(config->parallel, container2, 10);
+	itoa(config->parallel, container2, MAX_VAL_LEN);
 	FAST_PRINT(container2);
 	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Series: ");
-	itoa(config->modular_series, container3, 10);
+	itoa(config->modular_series, container3, MAX_VAL_LEN);
 	FAST_PRINT(container3);
 	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Parallel: ");
-	itoa(config->modular_parallel, container4, 10);
+	itoa(config->modular_parallel, container4, MAX_VAL_LEN);
 	FAST_PRINT(container4);
 	FAST_PRINT("\n\r");
 }
@@ -129,23 +130,32 @@ uint8_t ask_for_input(char *question) {
 	FAST_PRINT(question);
 	FAST_PRINT("'s value? ");
 
-	char str_val[10];
+	char str_val[MAX_VAL_LEN];
 	uint8_t count = 0;
 	char read_buf[1];
-	FAST_PRINT("HERE");
+
+	FAST_PRINT("\nHERE:\n");
 	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
 	FAST_PRINT(read_buf);
-	FAST_PRINT("HERE2");
+	FAST_PRINT("\nHERE2\n");
 	while (read_buf[0] != '\n' || read_buf[0] != '\r') {
+
 		str_val[count] = read_buf[0];
+		str_val[count+1] = "\0";
+		FAST_PRINT("\n Current status: ");
+		FAST_PRINT(str_val);
+		FAST_PRINT("\n");
+
 		count++;
-		if (count==10) {
+		if (count==MAX_VAL_LEN-1) {
+			FAST_PRINT("WELL SHIT FUCK");
 			break;
 		}
 		Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
-		FAST_PRINT(read_buf);
 	}
-	FAST_PRINT("HERE3");
+	FAST_PRINT("\nHERE3\n");
+	FAST_PRINT(str_val);
+
 	return (uint8_t) atoi(str_val);
 }
 
@@ -183,6 +193,7 @@ int main(void)
 
 		} else if (init_buf == SET_CHAR) {
 			config.series = ask_for_input("serial");
+			FAST_PRINT("\nHERE 4\n");
 			config.parallel = ask_for_input("parallel");
 			config.modular_series = ask_for_input("modular serial");
 			config.modular_parallel = ask_for_input("modular parallel");
@@ -192,7 +203,7 @@ int main(void)
 
 		} else {
 			const char *text = "Invalid character. Please try again. 'h' for help. \n\r";
-			Chip_UART_SendBlocking(LPC_USART, text, strlen(text));
+			FAST_PRINT(text);
 		}
 	}
 
