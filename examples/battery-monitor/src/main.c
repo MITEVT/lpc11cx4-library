@@ -129,7 +129,6 @@ uint8_t ask_for_input(char *question) {
 	FAST_PRINT(question);
 	FAST_PRINT("'s value? ");
 
-	char str_val[MAX_VAL_LEN];
 	uint8_t curr_val = 0;
 	uint8_t count = 0;
 	uint8_t power_of_ten = 1;
@@ -138,9 +137,7 @@ uint8_t ask_for_input(char *question) {
 	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
 	while (read_buf[0] != '\n' && read_buf[0] != '\r') {
 
-		str_val[count] = read_buf[0];
-		str_val[count+1] = '\0';
-		curr_val = (((int) read_buf[0]) & 0x01)*power_of_ten;
+		curr_val += power_of_ten;
 		power_of_ten *= 10;
 		FAST_PRINT(read_buf);
 
@@ -152,14 +149,10 @@ uint8_t ask_for_input(char *question) {
 	}
 
 	FAST_PRINT("\n\r");
-	FAST_PRINT("Current status: ");
-	FAST_PRINT(str_val);
-	FAST_PRINT(" ");
 	char container1[MAX_VAL_LEN];
 	itoa(curr_val, container1, MAX_VAL_LEN);
 	FAST_PRINT(container1);
 	FAST_PRINT("\n\r");
-
 
 	return (uint8_t) curr_val;
 }
@@ -200,7 +193,6 @@ int main(void)
 
 		} else if (init_buf == SET_CHAR) {
 			config.series = ask_for_input("serial");
-			FAST_PRINT("\nHERE 4\n");
 			config.parallel = ask_for_input("parallel");
 			config.modular_series = ask_for_input("modular serial");
 			config.modular_parallel = ask_for_input("modular parallel");
