@@ -134,27 +134,26 @@ uint8_t ask_for_input(char *question) {
 	uint8_t count = 0;
 	char read_buf[1];
 
-	FAST_PRINT("\nHERE:\n");
 	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
-	FAST_PRINT(read_buf);
-	FAST_PRINT("\nHERE2\n");
-	while (read_buf[0] != '\n' || read_buf[0] != '\r') {
+	while (read_buf[0] != '\n' && read_buf[0] != '\r') {
 
 		str_val[count] = read_buf[0];
 		str_val[count+1] = "\0";
-		FAST_PRINT("\n Current status: ");
-		FAST_PRINT(str_val);
-		FAST_PRINT("\n");
+		FAST_PRINT(read_buf);
 
 		count++;
 		if (count==MAX_VAL_LEN-1) {
-			FAST_PRINT("WELL SHIT FUCK");
 			break;
 		}
 		Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
 	}
-	FAST_PRINT("\nHERE3\n");
+
+	FAST_PRINT("\n\rCurrent status: ");
 	FAST_PRINT(str_val);
+	FAST_PRINT("\n\r");
+
+	FAST_PRINT("\nHERE3\n");
+
 
 	return (uint8_t) atoi(str_val);
 }
