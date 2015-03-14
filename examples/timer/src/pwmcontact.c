@@ -43,13 +43,17 @@ int main(void) {
 	LED_On();
 	Chip_GPIO_SetPinDIRInput(LPC_GPIO, 0, 1);
 	Chip_GPIO_SetPinDIROutput(LPC_GPIO, 1, 10);
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_10, (IOCON_FUNC2 | IOCON_MODE_INACT));/* TIMER1 PWM */
+	Chip_GPIO_SetPinState(LPC_GPIO, 1, 10, true);
+	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_10, (IOCON_FUNC0 | IOCON_MODE_INACT));/* TIMER1 PWM */
 	Chip_TIMER_Init(LPC_TIMER16_1);
 	Chip_TIMER_Reset(LPC_TIMER16_1);
 	Chip_TIMER_PrescaleSet(LPC_TIMER16_1, 1);
-	Chip_TIMER_SetMatch(LPC_TIMER16_1, 1, 50);
+	Chip_TIMER_SetMatch(LPC_TIMER16_1, 1, 96);
 	Chip_TIMER_SetMatch(LPC_TIMER16_1, 2, 100);
+	Chip_TIMER_SetMatch(LPC_TIMER16_1, 0, 100);
+	Chip_TIMER_SetMatch(LPC_TIMER16_1, 4, 100);
 	Chip_TIMER_ResetOnMatchEnable(LPC_TIMER16_1, 2);
+	LPC_TIMER16_1->PWMC |= 0x02;
 	Chip_TIMER_ExtMatchControlSet(LPC_TIMER16_1, 0, TIMER_EXTMATCH_TOGGLE, 1);
 	//Chip_TIMER_Enable(LPC_TIMER16_1);
 
@@ -66,7 +70,7 @@ int main(void) {
 				//Chopping off
 				//Set chopping high
 				Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_10, (IOCON_FUNC0 | IOCON_MODE_INACT));
-				Chip_GPIO_SetPinState(LPC_GPIO, 1, 10, true);
+				Chip_GPIO_SetPinState(LPC_GPIO, 1, 10, false);
 				//Delay
 				Delay(1000);
 				//Enable Timer
@@ -83,6 +87,8 @@ int main(void) {
 				//Chopping is true
 				//Stop Timer
 				Chip_TIMER_Disable(LPC_TIMER16_1);
+				Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_10, (IOCON_FUNC0 | IOCON_MODE_INACT));
+				Chip_GPIO_SetPinState(LPC_GPIO, 1, 10, true);
 				//Set Chopping to false
 				chopping = false;
 			}
