@@ -129,7 +129,7 @@ uint8_t ask_for_input(char *question) {
 	FAST_PRINT(question);
 	FAST_PRINT("'s value? ");
 
-	uint8_t curr_val = 0;
+	int curr_val = 0;
 	uint8_t count = 0;
 	uint8_t power_of_ten = 1;
 	char read_buf[1];
@@ -137,26 +137,45 @@ uint8_t ask_for_input(char *question) {
 	Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
 	while (read_buf[0] != '\n' && read_buf[0] != '\r') {
 
-		curr_val += power_of_ten;
-		power_of_ten *= 10;
 		FAST_PRINT(read_buf);
+		curr_val += ((int) read_buf[0] & 0xFFFF)*power_of_ten;
+		power_of_ten *= 10;
 
 		count++;
 		if (count==MAX_VAL_LEN-1) {
 			break;
 		}
+
 		Chip_UART_ReadBlocking(LPC_USART, read_buf, 1);
 	}
 
 	FAST_PRINT("\n\r");
-	char container1[MAX_VAL_LEN];
-	itoa(curr_val, container1, MAX_VAL_LEN);
-	FAST_PRINT(container1);
+	int final = reverse_int(curr_val);
+
+	char container[MAX_VAL_LEN];
+	itoa(final, container, MAX_VAL_LEN);
+	//FAST_PRINT(container);
+	
 	FAST_PRINT("\n\r");
 
-	return (uint8_t) curr_val;
+	return (uint8_t) final;
 }
 
+void print_number(int n) {
+	while (n != 0) {
+		n = n/10;
+	}
+}
+
+int reverse_int(int n) {
+	int reverse = 0;
+	while (n != 0) {
+		reverse = reverse * 10;
+		reverse = reverse + n%10;
+		n = n/10;
+	}
+	return reverse;
+}
 
 
 int main(void)
