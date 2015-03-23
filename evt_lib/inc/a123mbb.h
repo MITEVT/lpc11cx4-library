@@ -2,6 +2,15 @@
 #ifndef _A123DFS_H_
 #define _A123DFS_H_
 
+//-------------------------
+// Type Converters
+
+#define num2mVolts(num) (num/2+1000)
+#define mVolts2Num(mvolts) ((mvolts-1000)*2)
+
+//-------------------------
+// BCM_CMD
+
 #define BCM_CMD             0x50
 #define BCM_CMD_DLC 		 3
 #define BCM_REQUEST_TYPE_STD 0
@@ -22,9 +31,9 @@ void MBB_MakeCMD(MBB_CMD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	msg_obj->data[2] = (contents->balance_target & 0x1F) << 3;
 }
 
-/*
-** MOD_STD
-*/
+//-------------------------
+// MBB_STD
+
 #define MBB_STD             0x200
 #define MBB_STD_MASK 		0xF00
 #define MBB_STD_DLC 		8
