@@ -30,6 +30,74 @@ void MCP2515_Init(uint8_t cs_gpio, uint8_t cs_pin) {
 	xf_setup.rx_data = Rx_Buf;
 }
 
+// uint8_t MCP2515_SetBitRate(uint32_t baud, uint32_t freq, uint8_t SJW) {
+// 	if (SJW < 1) SJW = 1;
+// 	if (SJW > 4) SJW = 4;
+// 	if (baud > 0) {
+// 		MCP2515_Reset();
+
+// 		uint8_t BRP;
+// 		float TQ;
+// 		uint8_t BT = 0;
+// 		float tempBT;
+
+// 		float NBT = 1.0/ (float) baud * 1000;
+// 		for (BRP = 0; BRP < 64; BRP++) {
+// 			TQ = 2.0 * (float)(BRP + 1) / (float)freq;
+// 			tempBT = NBT / TQ;
+// 			if (tempBT <= 25) {
+// 				BT = (int) tempBT;
+// 				if (tempBT - BT == 0) break;
+// 			}
+// 		}
+
+// 		uint8_t SPT = (0.7 * BT);
+// 		uint8_t PRSEG = (SPT - 1) / 2;
+// 		uint8_t PHSEG1 = SPT - PRSEG - 1;
+// 		uint8_t PHSEG2 = BT - PHSEG1 - PRSEG - 1;
+
+
+// 		if (PRSEG + PHSEG1 < PHSEG2) {
+// 			return 1;
+// 		}
+
+// 		if (PHSEG2 <= SJW) {
+// 			return 2;
+// 		}
+
+
+// 		uint8_t BTLMODE = 1;
+// 		uint8_t SAM = 0;
+
+// 		uint8_t data = (((SJW - 1) << 6) | BRP);
+
+// 		MCP2515_Write(CNF1, data);
+// 		MCP2515_Write(CNF2, ((BTLMODE << 7) | (SAM << 6) | ((PHSEG1 - 1) << 3) | (PRSEG - 1)));
+// 		MCP2515_Write(CNF3, (0x00 | (PHSEG2 - 1)));
+// 		MCP2515_Write(TXRTSCTRL, 0);
+
+// 		if (!MCP2515_Mode(MODE_NORMAL)) {
+// 			return 3;
+// 		} 
+
+// 		MCP2515_Write(CANINTE, 0xFF);
+
+// 		uint8_t rtn = 0;
+// 		MCP2515_Read(CNF1, &rtn, 1);
+// 		if (rtn == data) {
+// 			return 0;
+// 		} else {
+// 			return 4;
+// 		}
+// 	} else {
+// 		return 5;
+// 	}
+
+// 	return 0;
+// }
+
+
+// Baud in KHz, Freq in Mhz
 uint8_t MCP2515_SetBitRate(uint32_t baud, uint32_t freq, uint8_t SJW) {
 	if (SJW < 1) SJW = 1;
 	if (SJW > 4) SJW = 4;
@@ -37,14 +105,14 @@ uint8_t MCP2515_SetBitRate(uint32_t baud, uint32_t freq, uint8_t SJW) {
 		MCP2515_Reset();
 
 		uint8_t BRP;
-		float TQ;
+		uint64_t TQ;
 		uint8_t BT = 0;
-		float tempBT;
+		uint64_t tempBT;
 
-		float NBT = 1.0/ (float) baud * 1000;
+		uint64_t NBT = 10000 * 1 / baud * 1000; 		// Since baud wil probably not go above 10 Mhz, this will prevent rounding losses 
 		for (BRP = 0; BRP < 64; BRP++) {
-			TQ = 2.0 * (float)(BRP + 1) / (float)freq;
-			tempBT = NBT / TQ;
+			TQ = 10000 * 2 * (BRP + 1) / freq;
+			tempBT = NBT / TQ; 							// The added 10K should cancel out here
 			if (tempBT <= 25) {
 				BT = (int) tempBT;
 				if (tempBT - BT == 0) break;
