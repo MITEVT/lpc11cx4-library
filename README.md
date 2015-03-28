@@ -1,9 +1,16 @@
 # lpc11cx4-library
-Libraries for LPC11C24FBD48 with example Makefiles and io. Only tested in Mac OS X Yosemite
+Standard and custom libraries for LPC11C24FBD48 
 
 ## Requirements
--gcc48
+gcc
+gcc-arm-none-eabi
 
--gcc-arm-none-eabi-48
-
+## Examples
+Blink
+On-Chip CAN
+External MCP2515 CAN
+SPI
+Timers
+UART Echo
+UART Interface
 

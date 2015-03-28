@@ -35,3 +35,6 @@
 
 # Build Directories
 **/bin/
+
+# Editor Artifacts
+*.swp
