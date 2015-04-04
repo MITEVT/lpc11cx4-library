@@ -3,7 +3,6 @@
 * 	for Battery System    *
 ***************************/
 
-
 #include "chip.h"
 #include "util.h"
 #include <string.h>
@@ -11,12 +10,11 @@
 
 #define LED_PIN 7
 #define MAX_VAL_LEN 10
-#define HELP_CHAR1 '?'
-#define HELP_CHAR2 'h'
+#define HELP_CHAR 'h'
 #define READ_CHAR 'r'
 #define SET_CHAR 's'
+#define SET_CHAR 's'
 #define FAST_PRINT(str) Chip_UART_SendBlocking(LPC_USART, str, strlen(str))
-
 
 struct Config {
 	uint8_t series;
@@ -45,48 +43,43 @@ __INLINE static void GPIO_Config(void) {
 
 }
 
-__INLINE static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 0, LED_PIN, true);
-
-}
-
-__INLINE static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, true);
-}
-
-__INLINE static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, false);
-}
-
 void print_help(void) {
-	const char *text = "Press 'r' to read the current battery settings. "
-						"Press 's' to set the current battery settings. "
-						"Press '?' or 'h' to repeat these instructions.\n\r";
+	const char *text = "Press 'r' to read settings. 's' to set the current battery settings, 'h' to repeat instructions.\n\r";
 	FAST_PRINT(text);
 }
 
 void print_config(Config_t *config) {
-	char container1[MAX_VAL_LEN], container2[MAX_VAL_LEN], container3[MAX_VAL_LEN], container4[MAX_VAL_LEN];
+	char container[MAX_VAL_LEN];
 
 	FAST_PRINT("Series: ");
-	itoa(config->series, container1, MAX_VAL_LEN);
-	FAST_PRINT(container1);
+	itoa(config->series, container, MAX_VAL_LEN);
+	FAST_PRINT(container);
 	FAST_PRINT("\n\r");
 	
 	FAST_PRINT("Parallel: ");
-	itoa(config->parallel, container2, MAX_VAL_LEN);
-	FAST_PRINT(container2);
+	itoa(config->parallel, container, MAX_VAL_LEN);
+	FAST_PRINT(container);
 	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Series: ");
-	itoa(config->modular_series, container3, MAX_VAL_LEN);
-	FAST_PRINT(container3);
+	itoa(config->modular_series, container, MAX_VAL_LEN);
+	FAST_PRINT(container);
 	FAST_PRINT("\n\r");
 
 	FAST_PRINT("Modular Parallel: ");
-	itoa(config->modular_parallel, container4, MAX_VAL_LEN);
-	FAST_PRINT(container4);
+	itoa(config->modular_parallel, container, MAX_VAL_LEN);
+	FAST_PRINT(container);
 	FAST_PRINT("\n\r");
+}
+
+int reverse_int(int n) {
+	int reverse = 0;
+	while (n != 0) {
+		reverse = reverse * 10;
+		reverse = reverse + n%10;
+		n = n/10;
+	}
+	return reverse;
 }
 
 uint8_t ask_for_input(char *question) {
@@ -103,7 +96,7 @@ uint8_t ask_for_input(char *question) {
 	while (read_buf[0] != '\n' && read_buf[0] != '\r') {
 
 		FAST_PRINT(read_buf);
-		curr_val += ((int) read_buf[0] & 0xFFFF)*power_of_ten;
+		curr_val += ((int) read_buf[0] & 0xF)*power_of_ten;
 		power_of_ten *= 10;
 
 		count++;
@@ -115,36 +108,13 @@ uint8_t ask_for_input(char *question) {
 	}
 
 	FAST_PRINT("\n\r");
-	int final = reverse_int(curr_val);
 
-	char container[MAX_VAL_LEN];
-	itoa(final, container, MAX_VAL_LEN);
-	//FAST_PRINT(container);
-	
-	FAST_PRINT("\n\r");
+	int final = reverse_int(curr_val);
 
 	return (uint8_t) final;
 }
 
-void print_number(int n) {
-	while (n != 0) {
-		n = n/10;
-	}
-}
-
-int reverse_int(int n) {
-	int reverse = 0;
-	while (n != 0) {
-		reverse = reverse * 10;
-		reverse = reverse + n%10;
-		n = n/10;
-	}
-	return reverse;
-}
-
-
-int main(void)
-{
+int main(void) {
 
 	SystemCoreClockUpdate();
 
@@ -158,34 +128,34 @@ int main(void)
 	Chip_UART_TXEnable(LPC_USART);
 
 	if (SysTick_Config (SystemCoreClock / 1000)) {
-		//Error
-		while(1);
+		while(1); //Error
 	}
 
 	GPIO_Config();
-	LED_Config();
-	LED_On();
+	Config_t config = {10,5,17,0};
 
 	while(1) {
 		char init_buf;
-		Config_t config = {10,5,17,0};
 
 		Chip_UART_ReadBlocking(LPC_USART, &init_buf, 1);
 
-		if (init_buf == HELP_CHAR1 || init_buf == HELP_CHAR2) {
+		if (init_buf == HELP_CHAR) {
 			print_help();
 
 		} else if (init_buf == SET_CHAR) {
+
 			config.series = ask_for_input("serial");
 			config.parallel = ask_for_input("parallel");
 			config.modular_series = ask_for_input("modular serial");
 			config.modular_parallel = ask_for_input("modular parallel");
 
+			print_help();
+
 		} else if (init_buf == READ_CHAR) {
 			print_config(&config);
 
 		} else {
-			const char *text = "Invalid character. Please try again. 'h' for help. \n\r";
+			const char *text = "Invalid character. 'h' for help. \n\r";
 			FAST_PRINT(text);
 		}
 	}
