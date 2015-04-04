@@ -1,3 +1,9 @@
+#ifndef _MCP2515DFS_H_
+#define _MCP2515DFS_H_
+
+#include "lpc_types.h"
+#include "ccand_11xx.h"
+
 #define LPC_SSP           LPC_SSP0
 
 #define CANSTAT 0x0E
@@ -236,3 +242,5 @@ void MCP2515_SendBuffer(uint8_t buffer);
 void MCP2515_BitModify(uint8_t address, uint8_t mask, uint8_t data);
 
 bool MCP2515_Mode(uint8_t mode);
+
+#endif
