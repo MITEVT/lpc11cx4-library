@@ -103,7 +103,7 @@ uint8_t ask_for_input(char *question) {
 	while (read_buf[0] != '\n' && read_buf[0] != '\r') {
 
 		FAST_PRINT(read_buf);
-		curr_val += ((int) read_buf[0] & 0xFFFF)*power_of_ten;
+		curr_val += ((int) read_buf[0] & 0xF)*power_of_ten;
 		power_of_ten *= 10;
 
 		count++;
@@ -115,13 +115,12 @@ uint8_t ask_for_input(char *question) {
 	}
 
 	FAST_PRINT("\n\r");
-	int final = reverse_int(curr_val);
 
-	char container[MAX_VAL_LEN];
-	itoa(final, container, MAX_VAL_LEN);
+	//char container[MAX_VAL_LEN];
+	//itoa(curr_val, container, MAX_VAL_LEN);
 	//FAST_PRINT(container);
-	
-	FAST_PRINT("\n\r");
+
+	int final = reverse_int(curr_val);
 
 	return (uint8_t) final;
 }
@@ -165,24 +164,31 @@ int main(void)
 	GPIO_Config();
 	LED_Config();
 	LED_On();
+	Config_t config = {10,5,17,0};
 
 	while(1) {
 		char init_buf;
-		Config_t config = {10,5,17,0};
 
 		Chip_UART_ReadBlocking(LPC_USART, &init_buf, 1);
 
 		if (init_buf == HELP_CHAR1 || init_buf == HELP_CHAR2) {
+
 			print_help();
+			FAST_PRINT("\n\r");
 
 		} else if (init_buf == SET_CHAR) {
+
 			config.series = ask_for_input("serial");
 			config.parallel = ask_for_input("parallel");
 			config.modular_series = ask_for_input("modular serial");
 			config.modular_parallel = ask_for_input("modular parallel");
+			FAST_PRINT("\n\r");
+
+			print_help();
 
 		} else if (init_buf == READ_CHAR) {
 			print_config(&config);
+			FAST_PRINT("\n\r");
 
 		} else {
 			const char *text = "Invalid character. Please try again. 'h' for help. \n\r";
