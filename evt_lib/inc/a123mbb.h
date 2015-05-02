@@ -2,13 +2,15 @@
 #ifndef _A123DFS_H_
 #define _A123DFS_H_
 
-#include "types.h"
+
+#include "lpc_types.h"
+#include "ccand_11xx.h"
 
 //-------------------------
 // Type Converters
 
-#define num2mVolts(num) (num/2+1000)
-#define mVolts2Num(mvolts) ((mvolts-1000)*2)
+#define num2mVolts(num) (uint32_t)(num/2+1000)
+#define mVolts2Num(mvolts) (uint32_t)((mvolts-1000)*2)
 
 //-------------------------
 // BCM_CMD

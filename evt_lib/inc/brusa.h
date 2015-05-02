@@ -80,10 +80,10 @@ int Brusa_DecodeStatus(NLG5_STATUS_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_ACT_I_DLC 8
 
 typedef struct {
-	uint16_t mains_current;
-	uint16_t mains_voltage;
-	uint16_t output_voltage;
-	uint16_t output_current;
+	uint16_t mains_current; 				// CentiAmps
+	uint16_t mains_voltage; 				// DeciVolts
+	uint16_t output_voltage; 				// DeciVolts
+	uint16_t output_current;				// CentiAmps
 } NLG5_ACT_I_T;
 
 int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj);
@@ -95,11 +95,11 @@ int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_ACT_II_DLC 8
 
 typedef struct {
-	uint16_t mains_current_max_pilot;
-	uint8_t mains_current_max_power_ind;
-	uint8_t aux_battery_voltage;
-	uint16_t amp_hours_ext_shunt;
-	uint16_t booster_output_current;
+	uint16_t mains_current_max_pilot;		// DeciAmps
+	uint8_t mains_current_max_power_ind;	// DeciAmps
+	uint8_t aux_battery_voltage;			// DeciVolts
+	uint16_t amp_hours_ext_shunt;			// DeciAmpHours
+	uint16_t booster_output_current;		// CentiAmps
 } NLG5_ACT_II_T;
 
 int Brusa_DecodeActII(NLG5_ACT_II_T *contents, CCAN_MSG_OBJ_T *msg_obj);
@@ -111,10 +111,10 @@ int Brusa_DecodeActII(NLG5_ACT_II_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_TEMP_DLC 8
 
 typedef struct {
-	uint16_t power_temp;
-	uint16_t temp_1;
-	uint16_t temp_2;
-	uint16_t temp_3;
+	uint16_t power_temp;					// .1 C
+	uint16_t temp_1; 						// .1 C
+	uint16_t temp_2;						// .1 C
+	uint16_t temp_3;						// .1 C
 } NLG5_TEMP_T;
 
 int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj);
