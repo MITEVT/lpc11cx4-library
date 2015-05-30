@@ -21,9 +21,9 @@ typedef struct {
 	uint8_t enable; 				// 0 = Disable, 1 = Enable
 	uint8_t clear_error;			// 0->1 = Clear error latch
 	uint8_t ventilation_request;	// 0 = No Ventilation, 1 = Ventilation
-	uint16_t max_mains_current;
-	uint16_t output_voltage;
-	uint16_t output_current;
+	uint16_t max_mains_cAmps;
+	uint32_t output_mVolts;
+	uint16_t output_cAmps;
 } NLG5_CTL_T;
 
 
@@ -80,10 +80,10 @@ int Brusa_DecodeStatus(NLG5_STATUS_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_ACT_I_DLC 8
 
 typedef struct {
-	uint16_t mains_current; 				// CentiAmps
-	uint16_t mains_voltage; 				// DeciVolts
-	uint16_t output_voltage; 				// DeciVolts
-	uint16_t output_current;				// CentiAmps
+	uint16_t mains_cAmps;
+	uint32_t mains_mVolts;
+	uint32_t output_mVolts;
+	uint16_t output_cAmps;
 } NLG5_ACT_I_T;
 
 int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj);
