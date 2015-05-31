@@ -9,8 +9,8 @@
 //-------------------------
 // Type Converters
 
-#define num2mVolts(num) (uint32_t)(num/2+1000)
-#define mVolts2Num(mvolts) (uint32_t)((mvolts-1000)*2)
+#define num2mVolts(num) (uint32_t)((num + 2000)/2)
+#define mVolts2Num(mvolts) (uint32_t)((mvolts - 1000) << 1)
 
 #define num2degC(num) (int8_t)((num/2)-40)
 

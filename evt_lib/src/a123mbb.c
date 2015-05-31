@@ -19,11 +19,14 @@ int MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	contents->cell_undervolt = (msg_obj->data[0] >> 3) & 1;
 	contents->response_id = msg_obj->data[0] >> 4;
 	contents->temp_degC = num2degC(msg_obj->data[1]);
-	contents->mod_min_mVolts = num2mVolts(((msg_obj->data[2] << 8 )| (msg_obj->data[3] & 0xF8)) >> 3);
+	contents->mod_min_mVolts = ((msg_obj->data[2] << 8 )| (msg_obj->data[3] & 0xF8)) >> 3;
+	contents->mod_min_mVolts = num2mVolts(contents->mod_min_mVolts);
 	contents->temp_chn = msg_obj->data[3] & 0x7;
-	contents->mod_max_mVolts = num2mVolts(((msg_obj->data[4] << 8) | (msg_obj->data[5] & 0xF8)) >> 3);
+	contents->mod_max_mVolts = ((msg_obj->data[4] << 8) | (msg_obj->data[5] & 0xF8)) >> 3;
+	contents->mod_max_mVolts = num2mVolts(contents->mod_max_mVolts);
 	contents->balance_c_count = msg_obj->data[5] & 0x7;
-	contents->mod_avg_mVolts = num2mVolts(((msg_obj->data[6] << 8) | (msg_obj->data[7] & 0xF8)) >> 3);
+	contents->mod_avg_mVolts = ((msg_obj->data[6] << 8) | (msg_obj->data[7] & 0xF8)) >> 3;
+	contents->mod_avg_mVolts = num2mVolts(contents->mod_avg_mVolts);
 	contents->voltage_mismatch = msg_obj->data[7] & 0x4;
 
 	return 0;
