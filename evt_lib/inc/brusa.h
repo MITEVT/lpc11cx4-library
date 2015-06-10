@@ -119,6 +119,11 @@ typedef struct {
 
 int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
+// ------------------------------------------------
+// NLG5 Errors
+
+#define NLG5_ERR 0x614
+#define NLG5_ERR_DLC 5
 
 #endif
 

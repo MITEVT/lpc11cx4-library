@@ -16,9 +16,9 @@
 
 #define MCP2515_RESET 0xC0
 #define MCP2515_READ  0x03
-#define MCP2515_READ_RX_BUF(buf) (0x90 | (buf << 1))
+#define MCP2515_READ_RX_BUF(buf) (0x90 | (buf << 2)) //0b10010nm0 where n is buffer and m (0 - ID, 1 - DATA)
 #define MCP2515_WRITE 0x02
-#define MCP2515_LOAD_TX_BUF(buf) (0x40 | buf)
+#define MCP2515_LOAD_TX_BUF(buf) (0x40 | (buf << 1)) //0b01000abc where ab is buffer and c is (0 - ID, 1 - DATA)
 #define MCP2515_RTS0  0x81
 #define MCP2515_RTS1  0x82
 #define MCP2515_RTS2  0x84
@@ -223,11 +223,15 @@
 
 /* =================== FUNCTION PROTOS ================== */
 
-void MCP2515_Init(uint8_t cs_gpio, uint8_t cs_pin);
+void MCP2515_Init(uint8_t cs_gpio, uint8_t cs_pin, uint8_t int_gpio, uint8_t int_pin);
 
 uint8_t MCP2515_SetBitRate(uint32_t baud, uint32_t freq, uint8_t SJW);
 
 void MCP2515_Reset(void);
+
+int8_t MCP2515_GetFullReceiveBuffer(void);
+
+int8_t MCP2515_GetEmptyTransmitBuffer(void);
 
 void MCP2515_Read(uint8_t address, uint8_t *buf, uint8_t length);
 
