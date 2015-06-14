@@ -21,11 +21,12 @@
 #define BCM_CMD_DLC 		 3
 #define BCM_REQUEST_TYPE_STD 0
 #define BCM_REQUEST_TYPE_EXT 1
-#define BCM_BALANCE_OFF num2mVolts(0x1FFE)
+#define BCM_BALANCE_OFF 0x1FFE
 
 typedef struct {
 	uint8_t request_type;
 	uint8_t request_id;
+	bool balance;
 	uint16_t balance_target_mVolts;
 } MBB_CMD_T;
 
@@ -53,6 +54,28 @@ typedef struct {
 
 int MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
+
+//-------------------------
+// MBB_EXT
+
+#define MBB_EXT1 			0x300
+#define MBB_EXT2 			0x400
+#define MBB_EXT3 			0x500
+
+#define MBB_EXT_MASK  		0xF00
+#define MBB_EXT_MOD_ID_MASK 0x0FF
+#define MBB_EXT_DLC 		8
+
+#define MBB_GetExtRange(mode_id) (((mode_id & MBB_EXT_MASK) >> 8) - 3)
+#define MBB_GetModID(mode_id) (mode_id & MBB_EXT_MOD_ID_MASK)
+
+typedef struct {
+	uint8_t id;
+	uint16_t bal;
+	uint16_t cell_mVolts[12];
+} MBB_EXT_T;
+
+int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
 /*
 ** Data Offsets
