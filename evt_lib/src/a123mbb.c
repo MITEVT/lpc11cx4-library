@@ -54,13 +54,13 @@ int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	contents->bal |= ((msg_obj->data[3] & 0x04) >> 1) << range * 4;
 	contents->bal |= ((msg_obj->data[5] & 0x04) >> 0) << range * 4;
 	contents->bal |= ((msg_obj->data[7] & 0x04) << 1) << range * 4;
-	contents->cell_mVolts[range * 4 + 0] = ((msg_obj->data[0] << 8) | (msg_obj->data[1] && 0xF8)) >> 3;
+	contents->cell_mVolts[range * 4 + 0] = ((msg_obj->data[0] << 8) | (msg_obj->data[1] & 0xF8)) >> 3;
 	contents->cell_mVolts[range * 4 + 0] = num2mVolts(contents->cell_mVolts[range * 4 + 0]);
-	contents->cell_mVolts[range * 4 + 1] = ((msg_obj->data[2] << 8) | (msg_obj->data[3] && 0xF8)) >> 3;
+	contents->cell_mVolts[range * 4 + 1] = ((msg_obj->data[2] << 8) | (msg_obj->data[3] & 0xF8)) >> 3;
 	contents->cell_mVolts[range * 4 + 1] = num2mVolts(contents->cell_mVolts[range * 4 + 1]);
-	contents->cell_mVolts[range * 4 + 2] = ((msg_obj->data[4] << 8) | (msg_obj->data[5] && 0xF8)) >> 3;
+	contents->cell_mVolts[range * 4 + 2] = ((msg_obj->data[4] << 8) | (msg_obj->data[5] & 0xF8)) >> 3;
 	contents->cell_mVolts[range * 4 + 2] = num2mVolts(contents->cell_mVolts[range * 4 + 2]);
-	contents->cell_mVolts[range * 4 + 3] = ((msg_obj->data[6] << 8) | (msg_obj->data[7] && 0xF8)) >> 3;
+	contents->cell_mVolts[range * 4 + 3] = ((msg_obj->data[6] << 8) | (msg_obj->data[7] & 0xF8)) >> 3;
 	contents->cell_mVolts[range * 4 + 3] = num2mVolts(contents->cell_mVolts[range * 4 + 3]);
 	
 

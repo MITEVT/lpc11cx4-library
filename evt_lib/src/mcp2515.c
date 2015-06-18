@@ -17,9 +17,6 @@ static uint8_t Tx_Buf[BUFFER_SIZE];
 /* Rx buffer */
 static uint8_t Rx_Buf[BUFFER_SIZE];
 
-static char str[20];
-
-
 static Chip_SSP_DATA_SETUP_T xf_setup;
 
 uint8_t _cs_gpio;
@@ -54,7 +51,8 @@ uint8_t MCP2515_SetBitRate(uint32_t baud, uint32_t freq, uint8_t SJW) {
 		uint8_t BT = 0;
 		uint64_t tempBT;
 
-		uint64_t NBT = 10000 * 1 / baud * 1000; 		// Since baud wil probably not go above 10 Mhz, this will prevent rounding losses 
+		uint64_t NBT = 10000 * 1 / baud * 1000; 		// Since baud wil probably not go above 10 Mhz, 
+														// this will prevent rounding losses 
 		for (BRP = 0; BRP < 64; BRP++) {
 			TQ = 10000 * 2 * (BRP + 1) / freq;
 			tempBT = NBT / TQ; 							// The added 10K should cancel out here

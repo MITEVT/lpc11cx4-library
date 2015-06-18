@@ -41,8 +41,10 @@ int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	}
 
 	contents->mains_cAmps = (msg_obj->data[0] << 8) | msg_obj->data[1];
-	contents->mains_mVolts = ((msg_obj->data[2] << 8) | msg_obj->data[3]) * 100; // Value originally in deciVolts
-	contents->output_mVolts = ((msg_obj->data[4] << 8) | msg_obj->data[5]) * 100; // Value originally in deciVolts
+	// Value originally in deciVolts
+	contents->mains_mVolts = ((msg_obj->data[2] << 8) | msg_obj->data[3]) * 100; 
+	// Value originally in deciVolts
+	contents->output_mVolts = ((msg_obj->data[4] << 8) | msg_obj->data[5]) * 100; 
 	contents->output_cAmps = (msg_obj->data[6] << 8) | msg_obj->data[7];
 
 	return 0;
