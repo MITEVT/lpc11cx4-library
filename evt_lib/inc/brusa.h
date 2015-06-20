@@ -125,6 +125,22 @@ int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_ERR 0x614
 #define NLG5_ERR_DLC 5
 
+#define NLG5_E_OOV(err) (err & 0x80) 		// Output overvoltage
+#define NLG5_E_MOV_II(err) (err & 0x40)		// Mains overvoltage II
+#define NLG5_E_MOV_I(err) (err & 0x20) 		// Mains overvoltage I
+#define NLG5_E_SC(err) (err & 0x10) 		// Power stage short circuit
+#define NLG5_E_OF(err) (err & 0x02) 		// Output Fuse Defect
+#define NLG5_E_MF(err) (err & 0x01) 		// Mians fuse defect
+#define NLG5_E_INIT(err) (err & 0x40000) 	// Initialization
+#define NLG5_E_C_TO(err) (err & 0x20000)	// CAN Timeout
+#define NLG5_E_C_OFF(err) (err & 0x10000)	// CAN OFF
+#define NLG5_E_C_TX(err) (err & 80000000) 	// CAN Tx
+#define NLG5_E_C_RX(err) (err & 40000000) 	// CAN Rx
+
+typedef uint64_t NLG5_ERR_T;
+
+int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj);
+
 #endif
 
 

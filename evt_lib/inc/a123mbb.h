@@ -80,7 +80,7 @@ int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 /*
 ** Data Offsets
 */
-#define MOD_THERM_OFFSET -40
-#define MOD_V_OFFSET 1
+#define MBB_RESP_MASK 0xF00
+#define MBB_MOD_ID_MASK 0x0FF
 
 #endif

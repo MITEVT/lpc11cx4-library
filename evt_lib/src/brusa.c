@@ -77,3 +77,16 @@ int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj)  {
 	return 0;
 }
 
+int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
+	if (msg_obj->dlc != NLG5_ERR_DLC) {
+		return -1;
+	}
+
+	msg_obj->data[4] &= 0xF0;
+	*contents = 0;
+	uint8_t i;
+	for (i = 0; i < NLG5_ERR_DLC; i++) {
+		*contents |= msg_obj->data[i] << (8 * i);
+	}
+}
+
