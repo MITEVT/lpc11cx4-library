@@ -83,4 +83,9 @@ int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define MBB_RESP_MASK 0xF00
 #define MBB_MOD_ID_MASK 0x0FF
 
+typedef struct {
+	uint8_t id;
+	bool flag;
+} MBB_REC_T;
+
 #endif
