@@ -184,7 +184,7 @@ void MCP2515_ReadBuffer(CCAN_MSG_OBJ_T *msgobj, uint8_t bufferNum) {
 	Chip_SSP_RWFrames_Blocking(LPC_SSP, &xf_setup);
 	msgobj->mode_id = getIDFromBytes(Rx_Buf[1], Rx_Buf[2]);
 
-	msgobj->dlc = Rx_Buf[5] * 0x0F;
+	msgobj->dlc = Rx_Buf[5] & 0x0F;
 	if (msgobj->dlc > 8)
 		msgobj->dlc = 8;
 

@@ -137,9 +137,21 @@ int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_E_C_TX(err) (err & 80000000) 	// CAN Tx
 #define NLG5_E_C_RX(err) (err & 40000000) 	// CAN Rx
 
-typedef uint64_t NLG5_ERR_T;
+typedef uint32_t NLG5_ERR_T;
 
 int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj);
+
+
+typedef struct {
+	NLG5_STATUS_T *stat;
+	NLG5_ACT_I_T *act_i;
+	NLG5_ACT_II_T *act_ii;
+	NLG5_TEMP_T *temp;
+	NLG5_ERR_T *err;
+} NLG5_MESSAGES_T;
+
+void Brusa_Init(NLG5_STATUS_T*, NLG5_ACT_I_T*, NLG5_ACT_II_T*, NLG5_TEMP_T*, NLG5_ERR_T*);
+int8_t Decode_Brusa(NLG5_MESSAGES_T*, CCAN_MSG_OBJ_T*);
 
 #endif
 
