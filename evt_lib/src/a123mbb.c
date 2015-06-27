@@ -16,11 +16,12 @@ void MBB_MakeCMD(MBB_CMD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	msg_obj->data[2] = (balance & 0x1F) << 3;
 }
 
-int MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
+int8_t MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	if (msg_obj->dlc != MBB_STD_DLC) {
 		return -1;
 	} 
 
+	contents->id = MBB_GetModID(msg_obj->mode_id);
 	contents->cell_overvolt = (msg_obj->data[0] >> 2) & 1;
 	contents->cell_undervolt = (msg_obj->data[0] >> 3) & 1;
 	contents->response_id = msg_obj->data[0] >> 4;
@@ -31,14 +32,14 @@ int MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	contents->mod_max_mVolts = ((msg_obj->data[4] << 8) | (msg_obj->data[5] & 0xF8)) >> 3;
 	contents->mod_max_mVolts = num2mVolts(contents->mod_max_mVolts);
 	contents->balance_c_count = msg_obj->data[5] & 0x7;
-	contents->mod_avg_mVolts = ((msg_obj->data[6] << 8) | (msg_obj->data[7] & 0xF8)) >> 3;
-	contents->mod_avg_mVolts = num2mVolts(contents->mod_avg_mVolts);
+	// contents->mod_avg_mVolts = ((msg_obj->data[6] << 8) | (msg_obj->data[7] & 0xF8)) >> 3;
+	// contents->mod_avg_mVolts = num2mVolts(contents->mod_avg_mVolts);
 	contents->voltage_mismatch = msg_obj->data[7] & 0x4;
 
 	return 0;
 }
 
-int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
+int8_t MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	if (msg_obj->dlc != MBB_EXT_DLC) {
 		return -1;
 	}
@@ -66,3 +67,5 @@ int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 
 	return 0;
 }
+
+

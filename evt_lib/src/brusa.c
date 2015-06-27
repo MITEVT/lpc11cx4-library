@@ -1,20 +1,5 @@
 #include "brusa.h"
 
-
-static NLG5_STATUS_T *status;
-static NLG5_ACT_I_T *act_i;
-static NLG5_ACT_II_T *act_ii;
-static NLG5_TEMP_T *temp;
-static NLG5_ERR_T *err;
-
-void Brusa_Init(NLG5_STATUS_T *s, NLG5_ACT_I_T *a_i, NLG5_ACT_II_T *a_ii, NLG5_TEMP_T *t, NLG5_ERR_T *e) {
-	status = s;
-	act_i = a_i;
-	act_ii = a_ii;
-	temp = t;
-	err = e;
-}
-
 void Brusa_MakeCTL(NLG5_CTL_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	msg_obj->mode_id = NLG5_CTL;
 	msg_obj->dlc = NLG5_CTL_DLC;
@@ -114,7 +99,7 @@ int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
  * @param msg CAN message object to decode
  * @return 0 if properly decodes, -1 otherwise
  */
-int8_t Decode_Brusa(NLG5_MESSAGES_T *state, CCAN_MSG_OBJ_T *msg) {
+int8_t Brusa_Decode(NLG5_MESSAGES_T *state, CCAN_MSG_OBJ_T *msg) {
 	if (msg->mode_id == NLG5_STATUS) {
 		return Brusa_DecodeStatus(state->stat, msg);
 	} else if (msg->mode_id == NLG5_TEMP) {

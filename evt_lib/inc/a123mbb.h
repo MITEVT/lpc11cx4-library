@@ -38,8 +38,10 @@ void MBB_MakeCMD(MBB_CMD_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define MBB_STD             0x200
 #define MBB_STD_MASK 		0xF00
 #define MBB_STD_DLC 		8
+#define MBB_IsStandard(mode_id) ((mode_id & MBB_RESP_MASK) == MBB_STD)
 
 typedef struct {
+	uint8_t id;
 	uint8_t cell_overvolt;
 	uint8_t cell_undervolt;
 	uint8_t response_id;
@@ -48,11 +50,11 @@ typedef struct {
 	uint8_t temp_chn;
 	uint32_t mod_max_mVolts;
 	uint8_t balance_c_count;
-	uint32_t mod_avg_mVolts;
+	// uint32_t mod_avg_mVolts;
 	uint8_t voltage_mismatch;
 } MBB_STD_T;
 
-int MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj);
+int8_t MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
 
 //-------------------------
@@ -68,6 +70,7 @@ int MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
 #define MBB_GetExtRange(mode_id) (((mode_id & MBB_EXT_MASK) >> 8) - 3)
 #define MBB_GetModID(mode_id) (mode_id & MBB_EXT_MOD_ID_MASK)
+#define MBB_IsExtended(mode_id) ((mode_id & MBB_RESP_MASK) == MBB_EXT1 || (mode_id & MBB_RESP_MASK) == MBB_EXT2 || (mode_id & MBB_RESP_MASK) == MBB_EXT3)
 
 typedef struct {
 	uint8_t id;
@@ -75,7 +78,7 @@ typedef struct {
 	uint16_t cell_mVolts[12];
 } MBB_EXT_T;
 
-int MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj);
+int8_t MBB_DecodeExt(MBB_EXT_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
 /*
 ** Data Offsets
@@ -87,5 +90,6 @@ typedef struct {
 	uint8_t id;
 	bool flag;
 } MBB_REC_T;
+
 
 #endif

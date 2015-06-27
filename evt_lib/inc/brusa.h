@@ -150,8 +150,7 @@ typedef struct {
 	NLG5_ERR_T *err;
 } NLG5_MESSAGES_T;
 
-void Brusa_Init(NLG5_STATUS_T*, NLG5_ACT_I_T*, NLG5_ACT_II_T*, NLG5_TEMP_T*, NLG5_ERR_T*);
-int8_t Decode_Brusa(NLG5_MESSAGES_T*, CCAN_MSG_OBJ_T*);
+int8_t Brusa_Decode(NLG5_MESSAGES_T*, CCAN_MSG_OBJ_T*);
 
 #endif
 
