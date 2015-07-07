@@ -21,9 +21,9 @@ typedef struct {
 	uint8_t enable; 				// 0 = Disable, 1 = Enable
 	uint8_t clear_error;			// 0->1 = Clear error latch
 	uint8_t ventilation_request;	// 0 = No Ventilation, 1 = Ventilation
-	uint16_t max_mains_current;
-	uint16_t output_voltage;
-	uint16_t output_current;
+	uint16_t max_mains_cAmps;
+	uint32_t output_mVolts;
+	uint16_t output_cAmps;
 } NLG5_CTL_T;
 
 
@@ -80,10 +80,10 @@ int Brusa_DecodeStatus(NLG5_STATUS_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_ACT_I_DLC 8
 
 typedef struct {
-	uint16_t mains_current;
-	uint16_t mains_voltage;
-	uint16_t output_voltage;
-	uint16_t output_current;
+	uint16_t mains_cAmps;
+	uint32_t mains_mVolts;
+	uint32_t output_mVolts;
+	uint16_t output_cAmps;
 } NLG5_ACT_I_T;
 
 int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj);
@@ -95,11 +95,11 @@ int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_ACT_II_DLC 8
 
 typedef struct {
-	uint16_t mains_current_max_pilot;
-	uint8_t mains_current_max_power_ind;
-	uint8_t aux_battery_voltage;
-	uint16_t amp_hours_ext_shunt;
-	uint16_t booster_output_current;
+	uint16_t mains_current_max_pilot;		// DeciAmps
+	uint8_t mains_current_max_power_ind;	// DeciAmps
+	uint8_t aux_battery_voltage;			// DeciVolts
+	uint16_t amp_hours_ext_shunt;			// DeciAmpHours
+	uint16_t booster_output_current;		// CentiAmps
 } NLG5_ACT_II_T;
 
 int Brusa_DecodeActII(NLG5_ACT_II_T *contents, CCAN_MSG_OBJ_T *msg_obj);
@@ -111,14 +111,46 @@ int Brusa_DecodeActII(NLG5_ACT_II_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 #define NLG5_TEMP_DLC 8
 
 typedef struct {
-	uint16_t power_temp;
-	uint16_t temp_1;
-	uint16_t temp_2;
-	uint16_t temp_3;
+	uint16_t power_temp;					// .1 C
+	uint16_t temp_1; 						// .1 C
+	uint16_t temp_2;						// .1 C
+	uint16_t temp_3;						// .1 C
 } NLG5_TEMP_T;
 
 int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
+// ------------------------------------------------
+// NLG5 Errors
+
+#define NLG5_ERR 0x614
+#define NLG5_ERR_DLC 5
+
+#define NLG5_E_OOV(err) (err & 0x80) 		// Output overvoltage
+#define NLG5_E_MOV_II(err) (err & 0x40)		// Mains overvoltage II
+#define NLG5_E_MOV_I(err) (err & 0x20) 		// Mains overvoltage I
+#define NLG5_E_SC(err) (err & 0x10) 		// Power stage short circuit
+#define NLG5_E_OF(err) (err & 0x02) 		// Output Fuse Defect
+#define NLG5_E_MF(err) (err & 0x01) 		// Mians fuse defect
+#define NLG5_E_INIT(err) (err & 0x40000) 	// Initialization
+#define NLG5_E_C_TO(err) (err & 0x20000)	// CAN Timeout
+#define NLG5_E_C_OFF(err) (err & 0x10000)	// CAN OFF
+#define NLG5_E_C_TX(err) (err & 80000000) 	// CAN Tx
+#define NLG5_E_C_RX(err) (err & 40000000) 	// CAN Rx
+
+typedef uint32_t NLG5_ERR_T;
+
+int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj);
+
+
+typedef struct {
+	NLG5_STATUS_T *stat;
+	NLG5_ACT_I_T *act_i;
+	NLG5_ACT_II_T *act_ii;
+	NLG5_TEMP_T *temp;
+	NLG5_ERR_T *err;
+} NLG5_MESSAGES_T;
+
+int8_t Brusa_Decode(NLG5_MESSAGES_T*, CCAN_MSG_OBJ_T*);
 
 #endif
 

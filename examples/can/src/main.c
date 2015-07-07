@@ -1,35 +1,7 @@
-/*
- * @brief CCAN on-chip driver example
- *
- * @note
- * Copyright(C) NXP Semiconductors, 2012
- * All rights reserved.
- *
- * @par
- * Software that is described herein is for illustrative purposes only
- * which provides customers with programming information regarding the
- * LPC products.  This software is supplied "AS IS" without any warranties of
- * any kind, and NXP Semiconductors and its licensor disclaim any and
- * all warranties, express or implied, including all implied warranties of
- * merchantability, fitness for a particular purpose and non-infringement of
- * intellectual property rights.  NXP Semiconductors assumes no responsibility
- * or liability for the use of the software, conveys no license or rights under any
- * patent, copyright, mask work right, or any other intellectual property rights in
- * or to any products. NXP Semiconductors reserves the right to make changes
- * in the software without notification. NXP Semiconductors also makes no
- * representation or warranty that such application will be suitable for the
- * specified use without further testing or modification.
- *
- * @par
- * Permission to use, copy, modify, and distribute this software and its
- * documentation is hereby granted, under NXP Semiconductors' and its
- * licensor's relevant copyrights in the software, without fee, provided that it
- * is used in conjunction with NXP Semiconductors microcontrollers.  This
- * copyright, permission, and disclaimer notice must appear in all copies of
- * this code.
- */
+
 
 #include "chip.h"
+#include "util.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -37,8 +9,8 @@
 
 #define TEST_CCAN_BAUD_RATE 500000
 
+#define LED_PORT 0
 #define LED_PIN 7
-#define LED_PIN2 0
 
 #define BUFFER_SIZE 8
 
@@ -50,6 +22,18 @@ volatile uint32_t msTicks;
 
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[8];
+
+static char str[100];
+
+#define DEBUG_ENABLE
+
+#ifdef DEBUG_ENABLE
+	#define DEBUG_Print(str) Chip_UART_SendBlocking(LPC_USART, str, strlen(str))
+	#define DEBUG_Write(str, count) Chip_UART_SendBlocking(LPC_USART, str, count)
+#else
+	#define DEBUG_Print(str)
+	#define DEBUG_Write(str, count) 
+#endif
 
 
 /*****************************************************************************
@@ -69,88 +53,21 @@ static void Delay(uint32_t dlyTicks) {
 	while ((msTicks - curTicks) < dlyTicks);
 }
 
-void reverse(char str[], int length)
-{
-    int start = 0;
-    int end = length -1;
-    while (start < end)
-    {
-    	char t = *(str+start);
-    	*(str+start) = *(str+end);
-    	*(str+end) = t;
-        start++;
-        end--;
-    }
-}
- 
-// Implementation of itoa()
-char* itoa(int num, char* str, int base)
-{
-    int i = 0;
-    bool isNegative = false;
- 
-    /* Handle 0 explicitely, otherwise empty string is printed for 0 */
-    if (num == 0)
-    {
-        str[i++] = '0';
-        str[i] = '\0';
-        return str;
-    }
- 
-    // In standard itoa(), negative numbers are handled only with 
-    // base 10. Otherwise numbers are considered unsigned.
-    if (num < 0 && base == 10)
-    {
-        isNegative = true;
-        num = -num;
-    }
- 
-    // Process individual digits
-    while (num != 0)
-    {
-        int rem = num % base;
-        str[i++] = (rem > 9)? (rem-10) + 'a' : rem + '0';
-        num = num/base;
-    }
- 
-    // If number is negative, append '-'
-    if (isNegative)
-        str[i++] = '-';
- 
-    str[i] = '\0'; // Append string terminator
- 
-    // Reverse the string
-    reverse(str, i);
- 
-    return str;
-}
-
-
 static void GPIO_Config(void) {
 	Chip_GPIO_Init(LPC_GPIO);
 }
 
 static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 0, LED_PIN, true);
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 3, LED_PIN2, true);
+	Chip_GPIO_WriteDirBit(LPC_GPIO, LED_PORT, LED_PIN, true);
 }
 
 static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, true);
-}
-
-static void LED2_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 3, LED_PIN2, true);
+	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, true);
 }
 
 static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, false);
+	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, false);
 }
-
-static void LED2_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 3, LED_PIN2, false);
-}
-
 
 void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
 {
@@ -200,10 +117,7 @@ void CAN_tx(uint8_t msg_obj_num) {}
 /*	CAN error callback */
 /*	Function is executed by the Callback handler after
     an error has occured on the CAN bus */
-void CAN_error(uint32_t error_info) {
-	LED2_On();
-	Chip_UART_SendBlocking(LPC_USART, "Error\n", 7);
-}
+void CAN_error(uint32_t error_info) {}
 
 /**
  * @brief	CCAN Interrupt Handler
@@ -215,14 +129,6 @@ void CAN_IRQHandler(void) {
 	LPC_CCAN_API->isr();
 }
 
-/*****************************************************************************
- * Public functions
- ****************************************************************************/
-
-/**
- * @brief	Main routine for CCAN_ROM example
- * @return	Nothing
- */
 int main(void)
 {
 
@@ -248,8 +154,7 @@ int main(void)
 	Chip_UART_TXEnable(LPC_USART);
 	//---------------
 
-	char *startMessage = "Started Up\n";
-	Chip_UART_SendBlocking(LPC_USART, startMessage, 12);
+	DEBUG_Print("Started up\n\r");
 
 	//---------------
 	//Ring Buffer
@@ -279,6 +184,14 @@ int main(void)
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
 
+	// typedef struct CCAN_MSG_OBJ {
+	// 	uint32_t  mode_id;
+	// 	uint32_t  mask;
+	// 	uint8_t   data[8];
+	// 	uint8_t   dlc;
+	// 	uint8_t   msgobj;
+	// } CCAN_MSG_OBJ_T;
+
 	/* Configure message object 1 to receive all 11-bit messages */
 	msg_obj.msgobj = 1;
 	msg_obj.mode_id = 0x000;
@@ -286,14 +199,13 @@ int main(void)
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
 	LED_Off();
-	LED2_Off();
 
 	while (1) {
 		__WFI();	/* Go to Sleep */
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			CCAN_MSG_OBJ_T temp_msg;
 			RingBuffer_Pop(&rx_buffer, &temp_msg);
-			Chip_UART_SendBlocking(LPC_USART, "Received Message\n", 18);
+			DEBUG_Print("Received Message\n\r");
 		}	
 	}
 }

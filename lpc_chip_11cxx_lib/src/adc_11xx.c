@@ -52,7 +52,7 @@ STATIC INLINE uint8_t getFullConvClk(void)
 }
 
 /* Get divider value */
-STATIC uint8_t getClkDiv(LPC_ADC_T *pADC, bool burstMode, uint32_t adcRate, uint8_t clks)
+STATIC uint8_t getClkDiv(bool burstMode, uint32_t adcRate, uint8_t clks)
 {
 	uint32_t adcBlockFreq;
 	uint32_t fullAdcRate;
@@ -124,7 +124,7 @@ void Chip_ADC_Init(LPC_ADC_T *pADC, ADC_CLOCK_SETUP_T *ADCSetup)
 	clk = 11;
 
 	ADCSetup->burstMode = false;
-	div = getClkDiv(pADC, false, ADCSetup->adcRate, clk);
+	div = getClkDiv(false, ADCSetup->adcRate, clk);
 	cr |= ADC_CR_CLKDIV(div);
 	cr |= ADC_CR_BITACC(ADCSetup->bitsAccuracy);
 	pADC->CR = cr;
@@ -198,7 +198,7 @@ void Chip_ADC_SetSampleRate(LPC_ADC_T *pADC, ADC_CLOCK_SETUP_T *ADCSetup, uint32
 
 	cr = pADC->CR & (~ADC_SAMPLE_RATE_CONFIG_MASK);
 	ADCSetup->adcRate = rate;
-	div = getClkDiv(pADC, ADCSetup->burstMode, rate, (11 - ADCSetup->bitsAccuracy));
+	div = getClkDiv(ADCSetup->burstMode, rate, (11 - ADCSetup->bitsAccuracy));
 	cr |= ADC_CR_CLKDIV(div);
 	cr |= ADC_CR_BITACC(ADCSetup->bitsAccuracy);
 	pADC->CR = cr;

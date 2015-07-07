@@ -85,7 +85,7 @@ STATIC INLINE void disableClk(I2C_ID_T id)
 }
 
 /* Get the ADC Clock Rate */
-STATIC INLINE uint32_t getClkRate(I2C_ID_T id)
+STATIC INLINE uint32_t getClkRate(void)
 {
 	return Chip_Clock_GetMainClockRate();
 }
@@ -383,7 +383,7 @@ void Chip_I2C_SetClockRate(I2C_ID_T id, uint32_t clockrate)
 {
 	uint32_t SCLValue;
 
-	SCLValue = (getClkRate(id) / clockrate);
+	SCLValue = (getClkRate() / clockrate);
 	LPC_I2Cx(id)->SCLH = (uint32_t) (SCLValue >> 1);
 	LPC_I2Cx(id)->SCLL = (uint32_t) (SCLValue - LPC_I2Cx(id)->SCLH);
 }
@@ -391,7 +391,7 @@ void Chip_I2C_SetClockRate(I2C_ID_T id, uint32_t clockrate)
 /* Get current clock rate for LPC_I2C peripheral */
 uint32_t Chip_I2C_GetClockRate(I2C_ID_T id)
 {
-	return getClkRate(id) / (LPC_I2Cx(id)->SCLH + LPC_I2Cx(id)->SCLL);
+	return getClkRate() / (LPC_I2Cx(id)->SCLH + LPC_I2Cx(id)->SCLL);
 }
 
 /* Set the master event handler */
@@ -441,7 +441,7 @@ int Chip_I2C_MasterTransfer(I2C_ID_T id, I2C_XFER_T *xfer)
 /* Master tx only */
 int Chip_I2C_MasterSend(I2C_ID_T id, uint8_t slaveAddr, const uint8_t *buff, uint8_t len)
 {
-	I2C_XFER_T xfer = {0};
+	I2C_XFER_T xfer;
 	xfer.slaveAddr = slaveAddr;
 	xfer.txBuff = buff;
 	xfer.txSz = len;
@@ -454,7 +454,7 @@ int Chip_I2C_MasterSend(I2C_ID_T id, uint8_t slaveAddr, const uint8_t *buff, uin
  */
 int Chip_I2C_MasterCmdRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t cmd, uint8_t *buff, int len)
 {
-	I2C_XFER_T xfer = {0};
+	I2C_XFER_T xfer;
 	xfer.slaveAddr = slaveAddr;
 	xfer.txBuff = &cmd;
 	xfer.txSz = 1;
@@ -467,7 +467,7 @@ int Chip_I2C_MasterCmdRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t cmd, uint8_t 
 /* Sequential master read */
 int Chip_I2C_MasterRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t *buff, int len)
 {
-	I2C_XFER_T xfer = {0};
+	I2C_XFER_T xfer;
 	xfer.slaveAddr = slaveAddr;
 	xfer.rxBuff = buff;
 	xfer.rxSz = len;

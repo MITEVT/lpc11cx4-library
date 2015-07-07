@@ -6,12 +6,15 @@ void Brusa_MakeCTL(NLG5_CTL_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	msg_obj->data[0] = ((contents->enable & 1) << 7) | 
 				  ((contents->clear_error & 1) << 6) | 
 				  ((contents->ventilation_request & 1) << 5);
-	msg_obj->data[1] = contents->max_mains_current >> 8;
-	msg_obj->data[2] = contents->max_mains_current & 0xFF;
-	msg_obj->data[3] = contents->output_voltage >> 8;
-	msg_obj->data[4] = contents->output_voltage & 0xFF;
-	msg_obj->data[5] = contents->output_current >> 8;
-	msg_obj->data[6] = contents->output_current & 0xFF;
+	uint16_t mains_dAmps = contents->max_mains_cAmps / 10;
+	msg_obj->data[1] = mains_dAmps >> 8;
+	msg_obj->data[2] = mains_dAmps & 0xFF;
+	uint16_t out_dVolts = contents->output_mVolts / 100;
+	msg_obj->data[3] = out_dVolts >> 8;
+	msg_obj->data[4] = out_dVolts & 0xFF;
+	uint16_t out_dAmps = contents->output_cAmps / 10;
+	msg_obj->data[5] = out_dAmps >> 8;
+	msg_obj->data[6] = out_dAmps & 0xFF;
 }
 
 int Brusa_DecodeStatus(NLG5_STATUS_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
@@ -37,10 +40,12 @@ int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 		return -1;
 	}
 
-	contents->mains_current = (msg_obj->data[0] << 8) | msg_obj->data[1];
-	contents->mains_voltage = (msg_obj->data[2] << 8) | msg_obj->data[3];
-	contents->output_voltage = (msg_obj->data[4] << 8) | msg_obj->data[5];
-	contents->output_current = (msg_obj->data[6] << 8) | msg_obj->data[7];
+	contents->mains_cAmps = (msg_obj->data[0] << 8) | msg_obj->data[1];
+	// Value originally in deciVolts
+	contents->mains_mVolts = ((msg_obj->data[2] << 8) | msg_obj->data[3]) * 100; 
+	// Value originally in deciVolts
+	contents->output_mVolts = ((msg_obj->data[4] << 8) | msg_obj->data[5]) * 100; 
+	contents->output_cAmps = (msg_obj->data[6] << 8) | msg_obj->data[7];
 
 	return 0;
 }
@@ -68,6 +73,46 @@ int Brusa_DecodeTemp(NLG5_TEMP_T *contents, CCAN_MSG_OBJ_T *msg_obj)  {
 	contents->temp_1 = (msg_obj->data[2] << 8) | msg_obj->data[3];
 	contents->temp_2 = (msg_obj->data[4] << 8) | msg_obj->data[5];
 	contents->temp_3 = (msg_obj->data[6] << 8) | msg_obj->data[7];
+
+	return 0;
+}
+
+int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
+	if (msg_obj->dlc != NLG5_ERR_DLC) {
+		return -1;
+	}
+
+	// msg_obj->data[4] &= 0xF0;
+	*(contents) = 0;
+	uint8_t i;
+	for (i = 0; i < NLG5_ERR_DLC - 1; i++) {
+		*(contents) |= (msg_obj->data[i] << (8 * i));
+	}
+
+	return 0;
+}
+
+/**
+ * @details Takes a CAN messege object and determines if it is a valid Brusa message.
+ * If so, it stuffs it into the appropriate static struct
+ * 
+ * @param msg CAN message object to decode
+ * @return 0 if properly decodes, -1 otherwise
+ */
+int8_t Brusa_Decode(NLG5_MESSAGES_T *state, CCAN_MSG_OBJ_T *msg) {
+	if (msg->mode_id == NLG5_STATUS) {
+		return Brusa_DecodeStatus(state->stat, msg);
+	} else if (msg->mode_id == NLG5_TEMP) {
+		return Brusa_DecodeTemp(state->temp, msg);
+	} else if (msg->mode_id == NLG5_ACT_I) {
+		return Brusa_DecodeActI(state->act_i, msg);
+	} else if (msg->mode_id == NLG5_ACT_II) {
+		return Brusa_DecodeActII(state->act_ii, msg);
+	} else if (msg->mode_id == NLG5_ERR) {
+		return Brusa_DecodeErr(state->err, msg);
+	} else {
+		return -1;
+	}
 
 	return 0;
 }

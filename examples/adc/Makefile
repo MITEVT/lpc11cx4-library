@@ -26,7 +26,7 @@ RM = rm -f
 #=============================================================================#
 
 # project name
-PROJECT = spi
+PROJECT = adc
 
 # core type
 CORE = cortex-m0
@@ -48,7 +48,7 @@ AS_DEFS = -D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
 
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
-INC_DIRS = ../../lpc_chip_11cxx_lib/inc ../../evt_lib/inc
+INC_DIRS = ../../lpc_chip_11cxx_lib/inc
 
 # library directories (absolute or relative paths to additional folders with
 # libraries)
@@ -60,7 +60,7 @@ LIBS =
 
 # additional directories with source files (absolute or relative paths to
 # folders with source files, current folder is always included)
-SRCS_DIRS = ../../lpc_chip_11cxx_lib/src ../../evt_lib/src src/
+SRCS_DIRS = ../../lpc_chip_11cxx_lib/src src/
 
 # extension of C++ files
 CXX_EXT = cpp
@@ -145,7 +145,7 @@ C_FLAGS = -std=$(C_STD) -g -ggdb3 -fverbose-asm -Wa,-ahlms=$(OUT_DIR_F)$(notdir 
 AS_FLAGS = -g -ggdb3 -Wa,-amhls=$(OUT_DIR_F)$(notdir $(<:.$(AS_EXT)=.lst))
 
 # flags for linker
-LD_FLAGS = -T$(LD_SCRIPT) -g -Wl,-Map=$(OUT_DIR_F)$(PROJECT).map,--cref,--no-warn-mismatch --specs=rdimon.specs
+LD_FLAGS = -T$(LD_SCRIPT) -g -Wl,-Map=$(OUT_DIR_F)$(PROJECT).map,--cref,--no-warn-mismatch
 
 # process option for removing unused code
 ifeq ($(REMOVE_UNUSED), 1)
