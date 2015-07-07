@@ -108,7 +108,7 @@ C_STD = gnu89
 # Write Configuration
 #=============================================================================#
 
-COMPORT = COMPORT = $(word 1, $(wildcard /dev/tty.usbserial-*) $(wildcard /dev/ttyUSB*))
+COMPORT = $(word 1, $(wildcard /dev/tty.usbserial-*) $(wildcard /dev/ttyUSB*))
 BAUDRATE = 115200
 CLOCK_OSC = 12000
 
@@ -292,7 +292,8 @@ make_output_dir :
 #-----------------------------------------------------------------------------#
 
 writeflash: $(HEX)
-	 @lpc21isp -NXPARM $^ $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
+	 @echo $(HEX)
+	 lpc21isp -NXPARM $^ $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #=============================================================================#
 # make clean
