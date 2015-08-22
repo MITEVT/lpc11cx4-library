@@ -25,7 +25,8 @@ int8_t MBB_DecodeStd(MBB_STD_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	contents->cell_overvolt = (msg_obj->data[0] >> 2) & 1;
 	contents->cell_undervolt = (msg_obj->data[0] >> 3) & 1;
 	contents->response_id = msg_obj->data[0] >> 4;
-	contents->temp_degC = num2degC(msg_obj->data[1]);
+	contents->temp_degC = msg_obj->data[1];
+	contents->temp_degC = num2degC(contents->temp_degC);
 	contents->mod_min_mVolts = ((msg_obj->data[2] << 8)| (msg_obj->data[3] & 0xF8)) >> 3;
 	contents->mod_min_mVolts = num2mVolts(contents->mod_min_mVolts);
 	contents->temp_chn = msg_obj->data[3] & 0x7;
