@@ -8,7 +8,7 @@
 
 const uint32_t OscRateIn = 0000000;
 
-#define LED_PIN 7
+#define LED_PIN 10
 
 volatile uint32_t msTicks;
 
@@ -65,11 +65,25 @@ int main(void)
 	GPIO_Config();
 	LED_Config();
 	LED_On();
+    Chip_GPIO_WriteDirBit(LPC_GPIO, 2, 10, true);
+    
+    uint8_t toggle = 0;
 
-	while(1) {
+    while(1) {
 		uint8_t count;
 		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0) {
 			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
+			if (Rx_Buf[0] == 'q') {
+                if (toggle == 0) {
+                    Chip_GPIO_SetPinState(LPC_GPIO, 2, 10, false);
+                    toggle = 1;
+                } else {
+                    Chip_GPIO_SetPinState(LPC_GPIO, 2, 10, true);
+                    toggle = 0;
+                }
+                
+            }
+        
 		}
 	}
 
