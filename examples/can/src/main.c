@@ -12,6 +12,8 @@
 #define LED_PORT 2
 #define LED_PIN 10
 
+#define MINIMUM_HEARTBEAT_FREQ 1
+
 #define BUFFER_SIZE 8
 
 const uint32_t OscRateIn = 12000000;
@@ -19,6 +21,7 @@ const uint32_t OscRateIn = 12000000;
 CCAN_MSG_OBJ_T msg_obj;
 
 volatile uint32_t msTicks;
+static volatile bool should_heartbeat_send = false;
 
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[8];
@@ -69,8 +72,7 @@ static void LED_Off(void) {
 	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, false);
 }
 
-void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
-{
+void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
 	uint32_t pClk, div, quanta, segs, seg1, seg2, clk_per_bit, can_sjw;
 	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_CAN);
 	pClk = Chip_Clock_GetMainClockRate();
@@ -131,19 +133,48 @@ void CAN_IRQHandler(void) {
 
 uint8_t Rx_Buf[8];
 
-//TIMER_32IRQHandler(){
-//	if(){
-//		
-//	}
-//}
+void TIMER_32IRQHandler(){
+    //set 
+}
 
-int main(void)
-{
+/*
+ * finds number of ticks after which we should send a message (have an interrupt)
+ */
+void uint8_t hertz2ticks(uint8_t minimum_heartbeat_freq, uint32_t core_clock_speed) {
 
+}
+
+/*
+ * timer: pointer to timer struct, defined in LPC_TIMER32_0
+ * core_clock_speed: 
+ * interrupt_number:
+ */
+
+void TIMER32_0_IRQHandler(void) {
+	if (Chip_TIMER_MatchPending(LPC_TIMER32_0, 0)) {
+		Chip_TIMER_ClearMatch(LPC_TIMER32_0, 0);
+		brusa_message_send = true;
+	}
+}
+
+void init_heartbeat_timer((LPC_TIMER_T *) timer, uint8_t core_clock_speed, uint8_t interrupt_number) {
+	Chip_TIMER_Init(timer);
+	Chip_TIMER_Reset(timer);
+	Chip_TIMER_MatchEnableInt(timer, 0);
+	Chip_TIMER_SetMatch(timer, 1, hertz2ticks(1, 12000000));
+	Chip_TIMER_ResetOnMatchEnable(timer, 1);
+
+	NVIC_ClearPendingIRQ(interrupt_number);
+	NVIC_EnableIRQ(interrupt_number);
+}
+
+int main(void) {
+
+    // Set correct register settings to initialize the system clock 
 	SystemCoreClockUpdate();
-
-	if (SysTick_Config (SystemCoreClock / 1000)) {
-		//Error
+    uint8_t freq_tick_interrupts = SystemCoreClock / 1000;
+	if (SysTick_Config (freq_tick_interrupts)) {
+		// Error in system clock!
 		while(1);
 	}
 
@@ -191,22 +222,9 @@ int main(void)
 	LPC_CCAN_API->config_calb(&callbacks);
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
+
+    init_heartbeat_timer(LPC_TIMER32_0, SystemCoreClock, TIMER_32_0_IRQn);
 	
-	//Chip_TIMER_Init(LPC_TIMER32_0);
-	//Chip_TIMER_Enable(LPC_TIMER32_0);
-	//Chip_TIMER_Reset(LPC_TIMER32_0);
-	//Chip_TIMER_MatchEnableInit(LPC_TIMER32_0,0);
-	//Chip_TIMER_SetMatch(LPC_TIMER32_0,0,SystemCoreClock/2);
-	//Chip_TIMER_ResetOnMatchEnable(LPC_TIMER32_0,0);
-
-	// typedef struct CCAN_MSG_OBJ {
-	// 	uint32_t  mode_id;
-	// 	uint32_t  mask;
-	// 	uint8_t   data[8];
-	// 	uint8_t   dlc;
-	// 	uint8_t   msgobj;
-	// } CCAN_MSG_OBJ_T;
-
 	/* Configure message object 1 to receive all 11-bit messages */
 	msg_obj.msgobj = 3;
 	msg_obj.mode_id = 0x444;
@@ -216,6 +234,21 @@ int main(void)
 	LED_Off();
 
 	while (1) {
+
+        uint64_t ID = 0x1AF
+
+
+		if (should_heartbeat_send) {
+			should_heartbeat_send = false;
+            msg_obj.msgobj = 4;
+            msg_obj.mode_id = ID;
+            msg_obj.dlc = 1;
+            msg_obj.data[1] = 1;
+
+            LPC_CCAN_API->can_transmit(&msg_obj);
+            DEBUG_Print("Sent heartbeat\n\r");
+		}
+
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			CCAN_MSG_OBJ_T temp_msg;
 			RingBuffer_Pop(&rx_buffer, &temp_msg);
@@ -227,6 +260,7 @@ int main(void)
 				LED_Off();
 			}
         }
+
 		uint8_t count;
 		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0){
 			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
