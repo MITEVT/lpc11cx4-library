@@ -9,8 +9,8 @@
 
 #define TEST_CCAN_BAUD_RATE 500000
 
-#define LED_PORT 0
-#define LED_PIN 7
+#define LED_PORT 2
+#define LED_PIN 10
 
 #define BUFFER_SIZE 8
 
@@ -99,12 +99,12 @@ void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
 /*	Function is executed by the Callback handler after
     a CAN message has been received */
 void CAN_rx(uint8_t msg_obj_num) {
-	// LED_On();
+	LED_On();
 	/* Determine which CAN message has been received */
 	msg_obj.msgobj = msg_obj_num;
 	/* Now load up the msg_obj structure with the CAN message */
 	LPC_CCAN_API->can_receive(&msg_obj);
-	if (msg_obj_num == 1) {
+	if (msg_obj_num == 3) {
 		RingBuffer_Insert(&rx_buffer, &msg_obj);
 	}
 }
@@ -128,6 +128,14 @@ void CAN_error(uint32_t error_info) {}
 void CAN_IRQHandler(void) {
 	LPC_CCAN_API->isr();
 }
+
+uint8_t Rx_Buf[8];
+
+//TIMER_32IRQHandler(){
+//	if(){
+//		
+//	}
+//}
 
 int main(void)
 {
@@ -183,6 +191,13 @@ int main(void)
 	LPC_CCAN_API->config_calb(&callbacks);
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
+	
+	//Chip_TIMER_Init(LPC_TIMER32_0);
+	//Chip_TIMER_Enable(LPC_TIMER32_0);
+	//Chip_TIMER_Reset(LPC_TIMER32_0);
+	//Chip_TIMER_MatchEnableInit(LPC_TIMER32_0,0);
+	//Chip_TIMER_SetMatch(LPC_TIMER32_0,0,SystemCoreClock/2);
+	//Chip_TIMER_ResetOnMatchEnable(LPC_TIMER32_0,0);
 
 	// typedef struct CCAN_MSG_OBJ {
 	// 	uint32_t  mode_id;
@@ -193,19 +208,48 @@ int main(void)
 	// } CCAN_MSG_OBJ_T;
 
 	/* Configure message object 1 to receive all 11-bit messages */
-	msg_obj.msgobj = 1;
-	msg_obj.mode_id = 0x000;
-	msg_obj.mask = 0x000;
+	msg_obj.msgobj = 3;
+	msg_obj.mode_id = 0x444;
+	msg_obj.mask = 0xfff;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
 	LED_Off();
 
 	while (1) {
-		__WFI();	/* Go to Sleep */
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			CCAN_MSG_OBJ_T temp_msg;
 			RingBuffer_Pop(&rx_buffer, &temp_msg);
 			DEBUG_Print("Received Message\n\r");
-		}	
+			
+			if(temp_msg.data[1] & 0x08){
+				LED_On();
+			} else{
+				LED_Off();
+			}
+        }
+		uint8_t count;
+		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0){
+			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
+			if (Rx_Buf[0] =='a') {
+				msg_obj.msgobj = 4;
+				msg_obj.mode_id = 0x1AF;
+				msg_obj.dlc = 2;
+				msg_obj.data[1] = 1;
+				msg_obj.data[2] = 0x08;
+
+				LPC_CCAN_API->can_transmit(&msg_obj);
+				DEBUG_Print("Turned LED On\n\r");
+			}
+			else if (Rx_Buf[0] =='b') {
+				msg_obj.msgobj = 4;
+				msg_obj.mode_id = 0x1AF;
+				msg_obj.dlc = 2;
+				msg_obj.data[1] = 8;
+				msg_obj.data[2] = 0;
+
+				LPC_CCAN_API->can_transmit(&msg_obj);
+				DEBUG_Print("Turned LED Off\n\r");
+			}
+		}
 	}
 }
