@@ -12,7 +12,8 @@
 #define LED_PORT 2
 #define LED_PIN 10
 
-#define MINIMUM_HEARTBEAT_FREQ 1
+#define MINIMUM_HEARTBEAT_FREQ 10
+#define TIMER_32_0_MATCH_SLOT 10
 
 #define BUFFER_SIZE 8
 
@@ -21,7 +22,7 @@ const uint32_t OscRateIn = 12000000;
 CCAN_MSG_OBJ_T msg_obj;
 
 volatile uint32_t msTicks;
-static volatile bool should_heartbeat_send = false;
+static volatile bool should_send_heartbeat = false;
 
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[8];
@@ -133,43 +134,37 @@ void CAN_IRQHandler(void) {
 
 uint8_t Rx_Buf[8];
 
-void TIMER_32IRQHandler(){
-    //set 
-}
-
-/*
- * finds number of ticks after which we should send a message (have an interrupt)
+/**
+ * @brief   (Heartbeat) Timer callback run every time a timer match hits
+ * @return  Nothing
  */
-void uint8_t hertz2ticks(uint8_t minimum_heartbeat_freq, uint32_t core_clock_speed) {
-
-}
-
-/*
- * timer: pointer to timer struct, defined in LPC_TIMER32_0
- * core_clock_speed: 
- * interrupt_number:
- */
-
-void TIMER32_0_IRQHandler(void) {
+void TIMER_34IRQHandler(){
 	if (Chip_TIMER_MatchPending(LPC_TIMER32_0, 0)) {
 		Chip_TIMER_ClearMatch(LPC_TIMER32_0, 0);
-		brusa_message_send = true;
+		should_send_heartbeat = true;
 	}
 }
 
-void init_heartbeat_timer((LPC_TIMER_T *) timer, uint8_t core_clock_speed, uint8_t interrupt_number) {
+/*
+ * @brief Finds number of ticks after which we should send a message (have an interrupt)
+ * @return 8-bit integer with tick period length
+ */
+uint8_t hertz2ticks(uint8_t minimum_heartbeat_freq, uint32_t core_clock_speed) {
+    return core_clock_speed / minimum_heartbeat_freq;
+}
+
+void init_heartbeat_timer(LPC_TIMER_T *timer, uint8_t match_slot, uint8_t timer_interrupt_number, uint32_t core_clock_speed, uint8_t minimum_heartbeat_freq) {
 	Chip_TIMER_Init(timer);
 	Chip_TIMER_Reset(timer);
-	Chip_TIMER_MatchEnableInt(timer, 0);
-	Chip_TIMER_SetMatch(timer, 1, hertz2ticks(1, 12000000));
-	Chip_TIMER_ResetOnMatchEnable(timer, 1);
+	Chip_TIMER_MatchEnableInt(timer, match_slot);
+	Chip_TIMER_SetMatch(timer, match_slot, hertz2ticks(minimum_heartbeat_freq, core_clock_speed));
+	Chip_TIMER_ResetOnMatchEnable(timer, match_slot);
 
-	NVIC_ClearPendingIRQ(interrupt_number);
-	NVIC_EnableIRQ(interrupt_number);
+	NVIC_ClearPendingIRQ(timer_interrupt_number);
+	NVIC_EnableIRQ(timer_interrupt_number);
 }
 
 int main(void) {
-
     // Set correct register settings to initialize the system clock 
 	SystemCoreClockUpdate();
     uint8_t freq_tick_interrupts = SystemCoreClock / 1000;
@@ -223,7 +218,7 @@ int main(void) {
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
 
-    init_heartbeat_timer(LPC_TIMER32_0, SystemCoreClock, TIMER_32_0_IRQn);
+    init_heartbeat_timer(LPC_TIMER32_0, TIMER_32_0_MATCH_SLOT, TIMER_32_0_IRQn, SystemCoreClock, MINIMUM_HEARTBEAT_FREQ);
 	
 	/* Configure message object 1 to receive all 11-bit messages */
 	msg_obj.msgobj = 3;
@@ -235,11 +230,10 @@ int main(void) {
 
 	while (1) {
 
-        uint64_t ID = 0x1AF
+        uint64_t ID = 0x1AF;
 
-
-		if (should_heartbeat_send) {
-			should_heartbeat_send = false;
+		if (should_send_heartbeat) {
+			should_send_heartbeat = false;
             msg_obj.msgobj = 4;
             msg_obj.mode_id = ID;
             msg_obj.dlc = 1;
