@@ -1,7 +1,8 @@
 
-
+#include "stepperMotor.h"
 #include "chip.h"
 #include "util.h"
+#include "string.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -9,8 +10,8 @@
 
 #define TEST_CCAN_BAUD_RATE 500000
 
-#define LED_PORT 0
-#define LED_PIN 7
+#define LED_PORT 2
+#define LED_PIN 10
 
 #define BUFFER_SIZE 8
 
@@ -19,6 +20,8 @@ const uint32_t OscRateIn = 12000000;
 CCAN_MSG_OBJ_T msg_obj;
 
 volatile uint32_t msTicks;
+
+#define Hertz2Ticks(freq) SystemCoreClock / freq
 
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[8];
@@ -69,6 +72,20 @@ static void LED_Off(void) {
 	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, false);
 }
 
+//----
+
+// static void LED2_Config(void) {
+// 	Chip_GPIO_WriteDirBit(LPC_GPIO, LED2_PORT, LED2_PIN, true);
+// }
+
+// static void LED2_On(void) {
+// 	Chip_GPIO_SetPinState(LPC_GPIO, LED2_PORT, LED2_PIN, true);
+// }
+
+// static void LED2_Off(void) {
+// 	Chip_GPIO_SetPinState(LPC_GPIO, LED2_PORT, LED2_PIN, false);
+// }
+
 void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
 {
 	uint32_t pClk, div, quanta, segs, seg1, seg2, clk_per_bit, can_sjw;
@@ -114,10 +131,15 @@ void CAN_rx(uint8_t msg_obj_num) {
     a CAN message has been transmitted */
 void CAN_tx(uint8_t msg_obj_num) {}
 
+
+bool b = false;
 /*	CAN error callback */
 /*	Function is executed by the Callback handler after
     an error has occured on the CAN bus */
-void CAN_error(uint32_t error_info) {}
+void CAN_error(uint32_t error_info) {
+
+	b = true;
+}
 
 /**
  * @brief	CCAN Interrupt Handler
@@ -128,6 +150,22 @@ void CAN_error(uint32_t error_info) {}
 void CAN_IRQHandler(void) {
 	LPC_CCAN_API->isr();
 }
+
+bool sent = false;
+bool isAlive = true;
+
+void TIMER32_0_IRQHandler(void) {
+	if (Chip_TIMER_MatchPending(LPC_TIMER32_0, 0)) {
+		Chip_TIMER_ClearMatch(LPC_TIMER32_0, 0);
+		if(!isAlive)
+			LED_On();
+		isAlive = false;
+		sent = true;
+
+	}
+}
+
+uint8_t Rx_Buf[8];
 
 int main(void)
 {
@@ -141,6 +179,18 @@ int main(void)
 
 	GPIO_Config();
 	LED_Config();
+
+	Chip_TIMER_Init(LPC_TIMER32_0);
+	Chip_TIMER_Reset(LPC_TIMER32_0);
+	Chip_TIMER_MatchEnableInt(LPC_TIMER32_0, 0);
+	Chip_TIMER_SetMatch(LPC_TIMER32_0, 0, SystemCoreClock/2);
+	Chip_TIMER_ResetOnMatchEnable(LPC_TIMER32_0, 0);
+
+	Chip_TIMER_Enable(LPC_TIMER32_0);
+
+	/* Enable timer interrupt */
+	NVIC_ClearPendingIRQ(TIMER_32_0_IRQn);
+	NVIC_EnableIRQ(TIMER_32_0_IRQn);
 
 	//---------------
 	//UART
@@ -184,6 +234,16 @@ int main(void)
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
 
+    Chip_TIMER_Init(LPC_TIMER32_0);
+	Chip_TIMER_Reset(LPC_TIMER32_0);
+	Chip_TIMER_MatchEnableInt(LPC_TIMER32_0, 0);
+	Chip_TIMER_SetMatch(LPC_TIMER32_0, 0, Hertz2Ticks(1));
+	Chip_TIMER_ResetOnMatchEnable(LPC_TIMER32_0, 0);
+	// Chip_TIMER_Enable(LPC_TIMER32_0);
+
+	NVIC_ClearPendingIRQ(TIMER_32_0_IRQn);
+	NVIC_EnableIRQ(TIMER_32_0_IRQn);
+
 	// typedef struct CCAN_MSG_OBJ {
 	// 	uint32_t  mode_id;
 	// 	uint32_t  mask;
@@ -194,18 +254,168 @@ int main(void)
 
 	/* Configure message object 1 to receive all 11-bit messages */
 	msg_obj.msgobj = 1;
-	msg_obj.mode_id = 0x000;
-	msg_obj.mask = 0x000;
+	msg_obj.mode_id = 0x600;
+	msg_obj.mask = 0xFFF;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
-	LED_Off();
+	LED_On();
+
+	SystemCoreClockUpdate();
+
+
+	if (SysTick_Config (SystemCoreClock / 1000)) {
+		//Error
+		while(1);
+	}
+
+
+	Stepper_Init(640);
+	Stepper_ZeroPosition();
+	Stepper_SetSpeed(46);
+	Delay(150);
 
 	while (1) {
-		__WFI();	/* Go to Sleep */
+		//__WFI();	/* Go to Sleep */
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			CCAN_MSG_OBJ_T temp_msg;
 			RingBuffer_Pop(&rx_buffer, &temp_msg);
-			DEBUG_Print("Received Message\n\r");
+			DEBUG_Print("\r\nReceived Correct Message!\n\r");
+			
+
+			if (temp_msg.data[0] & 2){
+				Stepper_Step(100);
+				Delay(100);
+				DEBUG_Print("\r\nfun!\n\r");
+			}
+				
+
+			if (temp_msg.data[0] & 8){
+				Stepper_HomePosition();
+				Delay(100);	
+			}
+
+			if (temp_msg.data[0] & 4){	
+				Stepper_HomePosition();
+				Delay(100);
+			}
+			if (temp_msg.data[1] & 1){
+				Stepper_Step(300);
+				Stepper_ZeroPosition();
+				
+			}
+			if (temp_msg.data[2] & 15){
+				Stepper_ZeroPosition();
+		
+
+			// isAlive=true;
+
+			// if (temp_msg.data[1] & 1){
+			// 	LED_On();
+			// 	DEBUG_Print("LED On \r\n");
+			// }
+			// if (temp_msg.data[1] & 2){
+			// 	DEBUG_Print("Delay \r\n");
+			// 	Delay(1000);
+			// }
+			// if (temp_msg.data[1] & 4){
+			// 	DEBUG_Print("Hi\n\r");
+			// }
+			// if (temp_msg.data[1] & 8){
+			// 	DEBUG_Print("LED Off\r\n");
+			// 	LED_Off();
+			}
+
 		}	
+
+		LED_On();
+		Delay(500);
+		LED_Off();
+		Delay(500);
+
+		if (b) {
+			b = false;
+			DEBUG_Print("CAN Error\r\n");
+		}
+
+		// if (sent) {
+		// 	sent = false;
+		// 	DEBUG_Print("Sent\r\n");
+		// }
+
+		uint8_t count;
+		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0) { // This If statement sends 
+																	//count = the number fo available bytes and then cehcsk that it isn't zero
+			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count); 		// Echo out user input (if you disable this then picocom will seem as if you aren't typeing anything)
+			if (Rx_Buf[0] == '1') {
+                msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x601;
+                msg_obj.dlc = 1;
+                msg_obj.data[1] = 0x01;
+                
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nSomething Should Happen\r\n");
+            } 
+
+
+
+
+            else if (Rx_Buf[0] == '2') {
+            	msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x1AF;
+                msg_obj.dlc = 1;
+                msg_obj.data[1] = 2;
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nLED Should Turn off\r\n");
+            } else if (Rx_Buf[0] == 'c') {
+            	msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x600;
+                msg_obj.dlc = 5;
+                msg_obj.data[1] = 0xB0;
+                msg_obj.data[2] = 0x0F;
+                msg_obj.data[3] = 0;
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nHello World should be printed\r\n");
+            } else if (Rx_Buf[0] == 'd') {
+            	msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x600;
+                msg_obj.dlc = 5;
+                msg_obj.data[1] = 0x07;
+                msg_obj.data[2] = 0XB0;
+                msg_obj.data[3] = 0x20;
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nShould recieve message\r\n");
+            } else if (Rx_Buf[0] == 'e') {
+            	msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x600;
+                msg_obj.dlc = 5;
+                msg_obj.data[1] = 0;
+                msg_obj.data[2] = 0x08;
+                msg_obj.data[3] = 0x20;
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nShould recieve message\r\n");
+
+            } else if (Rx_Buf[0] == 'z') {
+            	msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x601;
+                msg_obj.dlc = 1;
+                msg_obj.data[0] = 2;
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nLED Should Turn on\r\n");
+			} else if (Rx_Buf[0] == 'x') {
+            	msg_obj.msgobj = 2;
+                msg_obj.mode_id = 0x601;
+                msg_obj.dlc = 1;
+                msg_obj.data[0] = 128;
+
+                LPC_CCAN_API->can_transmit(&msg_obj);
+                DEBUG_Print("\r\nLED Should Turn off\r\n");
+        	}
+		}
 	}
 }
