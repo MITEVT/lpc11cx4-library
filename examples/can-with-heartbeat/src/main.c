@@ -1,7 +1,8 @@
 
-
+#include "stepperMotor.h"
 #include "chip.h"
 #include "util.h"
+#include "string.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -9,8 +10,12 @@
 
 #define TEST_CCAN_BAUD_RATE 500000
 
-#define LED_PORT 0
-#define LED_PIN 7
+#define LED_PORT 2
+#define LED_PIN 10
+
+#define MINIMUM_HEARTBEAT_FREQ 10
+#define TIMER_32_0_MATCH_SLOT 10
+>>>>>>> a50244e5adbf9f7cbf7a9ec693395423af93be58:examples/can-with-heartbeat/src/main.c
 
 #define BUFFER_SIZE 8
 
@@ -19,6 +24,9 @@ const uint32_t OscRateIn = 12000000;
 CCAN_MSG_OBJ_T msg_obj;
 
 volatile uint32_t msTicks;
+static volatile bool should_send_heartbeat = false;
+
+#define Hertz2Ticks(freq) SystemCoreClock / freq
 
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[8];
@@ -69,8 +77,25 @@ static void LED_Off(void) {
 	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, false);
 }
 
+//----
+
+// static void LED2_Config(void) {
+// 	Chip_GPIO_WriteDirBit(LPC_GPIO, LED2_PORT, LED2_PIN, true);
+// }
+
+// static void LED2_On(void) {
+// 	Chip_GPIO_SetPinState(LPC_GPIO, LED2_PORT, LED2_PIN, true);
+// }
+
+// static void LED2_Off(void) {
+// 	Chip_GPIO_SetPinState(LPC_GPIO, LED2_PORT, LED2_PIN, false);
+// }
+
 void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
 {
+=======
+void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
+>>>>>>> a50244e5adbf9f7cbf7a9ec693395423af93be58:examples/can-with-heartbeat/src/main.c
 	uint32_t pClk, div, quanta, segs, seg1, seg2, clk_per_bit, can_sjw;
 	Chip_Clock_EnablePeriphClock(SYSCTL_CLOCK_CAN);
 	pClk = Chip_Clock_GetMainClockRate();
@@ -99,12 +124,12 @@ void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
 /*	Function is executed by the Callback handler after
     a CAN message has been received */
 void CAN_rx(uint8_t msg_obj_num) {
-	// LED_On();
+	LED_On();
 	/* Determine which CAN message has been received */
 	msg_obj.msgobj = msg_obj_num;
 	/* Now load up the msg_obj structure with the CAN message */
 	LPC_CCAN_API->can_receive(&msg_obj);
-	if (msg_obj_num == 1) {
+	if (msg_obj_num == 3) {
 		RingBuffer_Insert(&rx_buffer, &msg_obj);
 	}
 }
@@ -114,10 +139,15 @@ void CAN_rx(uint8_t msg_obj_num) {
     a CAN message has been transmitted */
 void CAN_tx(uint8_t msg_obj_num) {}
 
+
+bool b = false;
 /*	CAN error callback */
 /*	Function is executed by the Callback handler after
     an error has occured on the CAN bus */
-void CAN_error(uint32_t error_info) {}
+void CAN_error(uint32_t error_info) {
+
+	b = true;
+}
 
 /**
  * @brief	CCAN Interrupt Handler
@@ -129,18 +159,61 @@ void CAN_IRQHandler(void) {
 	LPC_CCAN_API->isr();
 }
 
-int main(void)
-{
+uint8_t Rx_Buf[8];
 
+/**
+ * @brief   (Heartbeat) Timer callback run every time a timer match hits
+ * @return  Nothing
+ */
+void TIMER_34IRQHandler(){
+	if (Chip_TIMER_MatchPending(LPC_TIMER32_0, 0)) {
+		Chip_TIMER_ClearMatch(LPC_TIMER32_0, 0);
+		should_send_heartbeat = true;
+	}
+}
+
+/*
+ * @brief Finds number of ticks after which we should send a message (have an interrupt)
+ * @return 8-bit integer with tick period length
+ */
+uint8_t hertz2ticks(uint8_t minimum_heartbeat_freq, uint32_t core_clock_speed) {
+    return core_clock_speed / minimum_heartbeat_freq;
+}
+
+void init_heartbeat_timer(LPC_TIMER_T *timer, uint8_t match_slot, uint8_t timer_interrupt_number, uint32_t core_clock_speed, uint8_t minimum_heartbeat_freq) {
+	Chip_TIMER_Init(timer);
+	Chip_TIMER_Reset(timer);
+	Chip_TIMER_MatchEnableInt(timer, match_slot);
+	Chip_TIMER_SetMatch(timer, match_slot, hertz2ticks(minimum_heartbeat_freq, core_clock_speed));
+	Chip_TIMER_ResetOnMatchEnable(timer, match_slot);
+
+	NVIC_ClearPendingIRQ(timer_interrupt_number);
+	NVIC_EnableIRQ(timer_interrupt_number);
+}
+
+int main(void) {
+    // Set correct register settings to initialize the system clock 
 	SystemCoreClockUpdate();
-
-	if (SysTick_Config (SystemCoreClock / 1000)) {
-		//Error
+    uint8_t freq_tick_interrupts = SystemCoreClock / 1000;
+	if (SysTick_Config (freq_tick_interrupts)) {
+		// Error in system clock!
 		while(1);
 	}
 
 	GPIO_Config();
 	LED_Config();
+
+	Chip_TIMER_Init(LPC_TIMER32_0);
+	Chip_TIMER_Reset(LPC_TIMER32_0);
+	Chip_TIMER_MatchEnableInt(LPC_TIMER32_0, 0);
+	Chip_TIMER_SetMatch(LPC_TIMER32_0, 0, SystemCoreClock/2);
+	Chip_TIMER_ResetOnMatchEnable(LPC_TIMER32_0, 0);
+
+	Chip_TIMER_Enable(LPC_TIMER32_0);
+
+	/* Enable timer interrupt */
+	NVIC_ClearPendingIRQ(TIMER_32_0_IRQn);
+	NVIC_EnableIRQ(TIMER_32_0_IRQn);
 
 	//---------------
 	//UART
@@ -184,28 +257,81 @@ int main(void)
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
 
-	// typedef struct CCAN_MSG_OBJ {
-	// 	uint32_t  mode_id;
-	// 	uint32_t  mask;
-	// 	uint8_t   data[8];
-	// 	uint8_t   dlc;
-	// 	uint8_t   msgobj;
-	// } CCAN_MSG_OBJ_T;
-
+    init_heartbeat_timer(LPC_TIMER32_0, TIMER_32_0_MATCH_SLOT, TIMER_32_0_IRQn, SystemCoreClock, MINIMUM_HEARTBEAT_FREQ);
+	
 	/* Configure message object 1 to receive all 11-bit messages */
-	msg_obj.msgobj = 1;
-	msg_obj.mode_id = 0x000;
-	msg_obj.mask = 0x000;
+	msg_obj.msgobj = 3;
+	msg_obj.mode_id = 0x444;
+	msg_obj.mask = 0xfff;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
-	LED_Off();
+	LED_On();
+
+	SystemCoreClockUpdate();
+
+
+	if (SysTick_Config (SystemCoreClock / 1000)) {
+		//Error
+		while(1);
+	}
+
+
+	Stepper_Init(640);
+	Stepper_ZeroPosition();
+	Stepper_SetSpeed(46);
+	Delay(150);
 
 	while (1) {
-		__WFI();	/* Go to Sleep */
+
+        uint64_t ID = 0x1AF;
+
+		if (should_send_heartbeat) {
+			should_send_heartbeat = false;
+            msg_obj.msgobj = 4;
+            msg_obj.mode_id = ID;
+            msg_obj.dlc = 1;
+            msg_obj.data[1] = 1;
+
+            LPC_CCAN_API->can_transmit(&msg_obj);
+            DEBUG_Print("Sent heartbeat\n\r");
+		}
+
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			CCAN_MSG_OBJ_T temp_msg;
 			RingBuffer_Pop(&rx_buffer, &temp_msg);
 			DEBUG_Print("Received Message\n\r");
-		}	
+			
+			if(temp_msg.data[1] & 0x08){
+				LED_On();
+			} else{
+				LED_Off();
+			}
+        }
+
+		uint8_t count;
+		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0){
+			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
+			if (Rx_Buf[0] =='a') {
+				msg_obj.msgobj = 4;
+				msg_obj.mode_id = 0x1AF;
+				msg_obj.dlc = 2;
+				msg_obj.data[1] = 1;
+				msg_obj.data[2] = 0x08;
+
+				LPC_CCAN_API->can_transmit(&msg_obj);
+				DEBUG_Print("Turned LED On\n\r");
+			}
+			else if (Rx_Buf[0] =='b') {
+				msg_obj.msgobj = 4;
+				msg_obj.mode_id = 0x1AF;
+				msg_obj.dlc = 2;
+				msg_obj.data[1] = 8;
+				msg_obj.data[2] = 0;
+
+				LPC_CCAN_API->can_transmit(&msg_obj);
+				DEBUG_Print("Turned LED Off\n\r");
+			}
+>>>>>>> a50244e5adbf9f7cbf7a9ec693395423af93be58:examples/can-with-heartbeat/src/main.c
+		}
 	}
 }
