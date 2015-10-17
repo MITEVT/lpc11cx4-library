@@ -181,6 +181,7 @@ warning message, define ENABLE_UNTESTED_CODE.
 #define LPC_SYSCTL                ((LPC_SYSCTL_T           *) LPC_SYSCTL_BASE)
 #if defined(CHIP_LPC11CXX) || defined(CHIP_LPC11UXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11AXX) || defined(CHIP_LPC1125)
 #define LPC_SSP1                  ((LPC_SSP_T              *) LPC_SSP1_BASE)
+#define LPC_CCAN                  ((LPC_CCAN_T             *) LPC_CAN0_BASE)
 #endif
 #define LPC_USB                   ((LPC_USB_T              *) LPC_USB0_BASE)
 

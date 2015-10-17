@@ -8,7 +8,20 @@ static uint32_t stepperStepsPerRotation = 0;  // Number of steps in a full rotat
 static uint32_t stepperStepDelay = 0;         // Delay value based on speed
 
 
+// const uint32_t OscRateIn = 12000000;
 
+volatile uint32_t msTicks;
+
+
+
+// void SysTick_Handler(void) {
+// 	msTicks++;
+// }
+
+__INLINE static void Delay(uint32_t dlyTicks) {
+	uint32_t curTicks = msTicks;
+	while ((msTicks - curTicks) < dlyTicks);
+}
 
 
 void Stepper_StepCases(int step){
@@ -74,7 +87,7 @@ void Stepper_ChoosePosition(int percent){
 	float turn = (percent / 100.0) * stepperStepsPerRotation;
 	Stepper_Step(turn - Stepper_Position());
 }
-2
+
 void Stepper_ZeroPosition(void){
 	int i = stepperStepsPerRotation;
 	while(i > 0){
@@ -86,7 +99,14 @@ void Stepper_ZeroPosition(void){
 }
 
 void Stepper_HomePosition(void){
-	Stepper_Step(stepperPosition * -1);
+	int i = stepperStepsPerRotation;
+	while(i > 0){
+		Stepper_StepCases(i % 4);
+		Delay(8);
+		i --;
+	}
+	stepperPosition = 0;
+	//Stepper_Step(stepperPosition * -1);
 }
 
 
@@ -114,7 +134,7 @@ void Stepper_Step(int steps){
 }
 
 
-//TEST CODE BELOW ---------------------------------------
+// //TEST CODE BELOW ---------------------------------------
 
 // int main(void){
 
@@ -134,18 +154,15 @@ void Stepper_Step(int steps){
 
 	
 // 	while(1){
-		
-// 		Stepper_ChoosePosition(75);
+// 		Stepper_Step(640);
 // 		Delay(100);
-		
-// 		Stepper_Step(320);
+// 		Stepper_HomePosition();
+// 		Delay(200);	
+// 		Stepper_Step(60);
 // 		Delay(100);	
-		
-// 		Stepper_Step(80);
+// 		Stepper_Step(100);
 // 		Delay(100);
-
-// 		Stepper_Step(160)
-// 		Stepper_ZeroPosition();
+// 		Stepper_HomePosition();
 // 	}
 
 

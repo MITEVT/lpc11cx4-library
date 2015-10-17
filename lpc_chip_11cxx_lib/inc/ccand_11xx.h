@@ -36,6 +36,69 @@
 extern "C" {
 #endif
 
+/**
+ * @brief C_CAN register block structure
+ */
+typedef struct {					/*!< CCANn Structure       */
+
+	__IO uint32_t CANCTRL;			/*!< CAN control register. */
+	__IO uint32_t CANSTAT;			/*!< Status register. */
+	__I  uint32_t CANEC;			/*!< Error counter. */
+	__IO uint32_t CANBT;			/*!< Bit timing register. */
+	__I  uint32_t CANINT;			/*!< Interrupt register. */
+	__IO uint32_t CANTEST;			/*!< Test register. */
+	__IO uint32_t CANBRPE;			/*!< Baud rate prescaler extension register. */
+	__I uint32_t RESERVED0[1];
+	__IO uint32_t CANIF1_CMDREQ;	/*!< Message interface 1 command request. */
+
+	union {
+		__IO uint32_t CANIF1_CMDMSK_W;	/*!< Message interface 1 command mask (write direction). */
+		__IO uint32_t CANIF1_CMDMSK_R;	/*!< Message interface 1 command mask (read direction). */
+	};
+
+	__IO uint32_t CANIF1_MSK1;		/*!< Message interface 1 mask 1. */
+	__IO uint32_t CANIF1_MSK2;		/*!< Message interface 1 mask 2. */
+	__IO uint32_t CANIF1_ARB1;		/*!< Message interface 1 arbitration 1. */
+	__IO uint32_t CANIF1_ARB2;		/*!< Message interface 1 arbitration 2. */
+	__IO uint32_t CANIF1_MCTRL;		/*!< Message interface 1 message control. */
+	__IO uint32_t CANIF1_DA1;		/*!< Message interface 1 data A1. */
+	__IO uint32_t CANIF1_DA2;		/*!< Message interface 1 data A2. */
+	__IO uint32_t CANIF1_DB1;		/*!< Message interface 1 data B1. */
+	__IO uint32_t CANIF1_DB2;		/*!< Message interface 1 data B2. */
+	__I  uint32_t RESERVED1[13];
+	__IO uint32_t CANIF2_CMDREQ;	/*!< Message interface 2 command request. */
+	
+	union {
+		__IO uint32_t CANIF2_CMDMSK_W;	/*!< Message interface 2 command mask (write direction). */
+		__IO uint32_t CANIF2_CMDMSK_R;	/*!< Message interface 2 command mask (read direction). */
+	};
+
+	__IO uint32_t CANIF2_MSK1;		/*!< Message interface 2 mask 1. */
+	__IO uint32_t CANIF2_MSK2;		/*!< Message interface 2 mask 2. */
+	__IO uint32_t CANIF2_ARB1;		/*!< Message interface 2 arbitration 1. */
+	__IO uint32_t CANIF2_ARB2;		/*!< Message interface 2 arbitration 2. */
+	__IO uint32_t CANIF2_MCTRL;		/*!< Message interface 2 message control. */
+	__IO uint32_t CANIF2_DA1;		/*!< Message interface 2 data A1. */
+	__IO uint32_t CANIF2_DA2;		/*!< Message interface 2 data A2. */
+	__IO uint32_t CANIF2_DB1;		/*!< Message interface 2 data B1. */
+	__IO uint32_t CANIF2_DB2;		/*!< Message interface 2 data B2. */
+	__I  uint32_t RESERVED2[22];
+	__I  uint32_t CANTXREQ1;		/*!< Transmission request 1. */
+	__I  uint32_t CANTXREQ2;		/*!< Transmission request 2. */
+	__I  uint32_t RESERVED3[6];
+	__I  uint32_t CANND1;			/*!< New data 1. */
+	__I  uint32_t CANND2;			/*!< New data 2. */
+	__I  uint32_t RESERVED4[6];
+	__I  uint32_t CANIR1;			/*!< Interrupt pending 1. */
+	__I  uint32_t CANIR2;			/*!< Interrupt pending 2. */
+	__I  uint32_t RESERVED5[6];
+	__I  uint32_t CANMSGV1;			/*!< Message valid 1. */
+	__I  uint32_t CANMSGV2;			/*!< Message valid 2. */
+	__I  uint32_t RESERVED6[6];
+	__IO uint32_t CANCLKDIV;		/*!< Can clock divider register. */
+
+} LPC_CCAN_T;
+
 /** @defgroup CCANROM_11XX CHIP: LPC11xx CCAN ROM Driver
  * @ingroup CHIP_11XX_Drivers
  * @{

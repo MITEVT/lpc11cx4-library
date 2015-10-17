@@ -2,9 +2,7 @@
 #ifndef _A123DFS_H_
 #define _A123DFS_H_
 
-
-#include "lpc_types.h"
-#include "ccand_11xx.h"
+#include "chip.h"
 
 //-------------------------
 // Type Converters
