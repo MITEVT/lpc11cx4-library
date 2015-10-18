@@ -29,7 +29,7 @@ void SysTick_Handler(void){
 */
 
 void TIMER32_0_IRQHandler(void){
-	Chip_TIMER_Reset(LPC_TIMER32_0);					// Reset the timer jmmediately 
+	Chip_TIMER_Reset(LPC_TIMER32_0);					// Reset the timer immediately 
         Chip_TIMER_ClearCapture(LPC_TIMER32_0, 0);				// Clear the capture
 	time = (time*count+Chip_TIMER_ReadCapture(LPC_TIMER32_0,0))/(1+count);	// Continue the running average 
 	count++;								// Increase the count hto allow the running average to be properly computed
@@ -46,7 +46,7 @@ int main(void){
 	count = 0;
 
 	// GPIO Initialization
-	Chip_GPIO_Init(LPC_GPIO);	// Initialize GPIO for specific memory location
+	Chip_GPIO_Init(LPC_GPIO);					// Initialize GPIO for specific memory location
 	Chip_GPIO_WriteDirBit(LPC_GPIO, TEST_PORT, TEST_PIN, true);	// Test for running code LED
 	Chip_GPIO_SetPinState(LPC_GPIO, TEST_PORT, TEST_PIN, false);	// Test for running code LED
 	
@@ -62,7 +62,7 @@ int main(void){
 	// End of UART setup
 
 	// Timer Initialization things
-	Chip_TIMER_Init(LPC_TIMER32_0);			// Assign memory location of the timer
+	Chip_TIMER_Init(LPC_TIMER32_0);			// Initialize the timer 
 	Chip_TIMER_Reset(LPC_TIMER32_0);		// Reset the timer
 	Chip_TIMER_PrescaleSet(LPC_TIMER32_0, 0);	// Ensure that the prescaler is 0
 	LPC_TIMER32_0->CCR |= 5;			// Set the first and third bits of the capture 
