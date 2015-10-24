@@ -2,6 +2,7 @@
 
 #include "chip.h"
 #include "util.h"
+#include <string.h>
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -13,17 +14,22 @@
 #define LED_PIN 7
 
 #define BUFFER_SIZE 8
+#define UART_RX_BUFFER_SIZE 8
 
 const uint32_t OscRateIn = 12000000;
 
-CCAN_MSG_OBJ_T msg_obj;
 
 volatile uint32_t msTicks;
 
+
+CCAN_MSG_OBJ_T msg_obj;
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[8];
+static bool can_error_flag;
+static bool can_error_info;
 
 static char str[100];
+static char uart_rx_buf[UART_RX_BUFFER_SIZE];
 
 #define DEBUG_ENABLE
 
@@ -35,38 +41,12 @@ static char str[100];
 	#define DEBUG_Write(str, count) 
 #endif
 
-
-/*****************************************************************************
- * Public types/enumerations/variables
- ****************************************************************************/
-
 /*****************************************************************************
  * Private functions
  ****************************************************************************/
 
 void SysTick_Handler(void) {
 	msTicks++;
-}
-
-static void Delay(uint32_t dlyTicks) {
-	uint32_t curTicks = msTicks;
-	while ((msTicks - curTicks) < dlyTicks);
-}
-
-static void GPIO_Config(void) {
-	Chip_GPIO_Init(LPC_GPIO);
-}
-
-static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, LED_PORT, LED_PIN, true);
-}
-
-static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, true);
-}
-
-static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, LED_PORT, LED_PIN, false);
 }
 
 void baudrateCalculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg)
@@ -112,12 +92,17 @@ void CAN_rx(uint8_t msg_obj_num) {
 /*	CAN transmit callback */
 /*	Function is executed by the Callback handler after
     a CAN message has been transmitted */
-void CAN_tx(uint8_t msg_obj_num) {}
+void CAN_tx(uint8_t msg_obj_num) {
+	msg_obj_num = msg_obj_num;
+}
 
 /*	CAN error callback */
 /*	Function is executed by the Callback handler after
-    an error has occured on the CAN bus */
-void CAN_error(uint32_t error_info) {}
+    an error has occurred on the CAN bus */
+void CAN_error(uint32_t error_info) {
+	can_error_info = error_info;
+	can_error_flag = true;
+}
 
 /**
  * @brief	CCAN Interrupt Handler
@@ -138,9 +123,6 @@ int main(void)
 		//Error
 		while(1);
 	}
-
-	GPIO_Config();
-	LED_Config();
 
 	//---------------
 	//UART
@@ -192,20 +174,48 @@ int main(void)
 	// 	uint8_t   msgobj;
 	// } CCAN_MSG_OBJ_T;
 
-	/* Configure message object 1 to receive all 11-bit messages */
+	/* Configure message object 1 to only ID 0x600 */
 	msg_obj.msgobj = 1;
-	msg_obj.mode_id = 0x000;
-	msg_obj.mask = 0x000;
+	msg_obj.mode_id = 0x600;
+	msg_obj.mask = 0x7FF;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
-	LED_Off();
+	
+	can_error_flag = false;
+	can_error_info = 0;
 
 	while (1) {
-		__WFI();	/* Go to Sleep */
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			CCAN_MSG_OBJ_T temp_msg;
 			RingBuffer_Pop(&rx_buffer, &temp_msg);
-			DEBUG_Print("Received Message\n\r");
+			DEBUG_Print("Received Message ID: 0x");
+			itoa(temp_msg.mode_id, str, 16);
+			DEBUG_Print(str);
+			DEBUG_Print("\r\n");
 		}	
+
+		if (can_error_flag) {
+			can_error_flag = false;
+			DEBUG_Print("CAN Error: 0b");
+			itoa(can_error_info, str, 2);
+			DEBUG_Print(str);
+			DEBUG_Print("\r\n");
+		}
+
+		uint8_t count;
+		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
+			switch (uart_rx_buf[0]) {
+				case 'a':
+					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
+					msg_obj.msgobj = 2;
+					msg_obj.dlc = 1;
+					msg_obj.data[0] = 0xAA;
+					LPC_CCAN_API->can_transmit(&msg_obj);
+					break;
+				default:
+					DEBUG_Print("Invalid Command\r\n");
+					break;
+			}
+		}
 	}
 }
