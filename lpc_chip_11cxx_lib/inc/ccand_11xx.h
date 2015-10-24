@@ -129,7 +129,12 @@ typedef struct {					/*!< CCANn Structure       */
 typedef struct CCAN_MSG_OBJ {
 	uint32_t  mode_id;
 	uint32_t  mask;
-	uint8_t   data[8];
+	union {
+		uint8_t data[8];
+		uint16_t data_16[4];
+		uint32_t data_32[2];
+		uint64_t data_64;
+	};
 	uint8_t   dlc;
 	uint8_t   msgobj;
 } CCAN_MSG_OBJ_T;
