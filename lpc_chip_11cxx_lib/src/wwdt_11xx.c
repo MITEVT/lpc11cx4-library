@@ -64,6 +64,7 @@ void Chip_WWDT_Init(LPC_WWDT_T *pWWDT)
 /* Shutdown the Watchdog timer */
 void Chip_WWDT_DeInit(LPC_WWDT_T *pWWDT)
 {
+	UNUSED(pWWDT);
 	Chip_Clock_DisablePeriphClock(SYSCTL_CLOCK_WDT);
 }
 
