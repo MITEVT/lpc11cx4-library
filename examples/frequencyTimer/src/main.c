@@ -68,7 +68,7 @@ int main(void){
 	LPC_TIMER32_0->CCR |= 5;			// Set the first and third bits of the capture 
 
 	// Interrupt setup things
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_5, (IOCON_FUNC2|IOCON_MODE_INACT));	// Set port 1, pin 5, to the 32 bit timer capture function
+	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_5, (IOCON_FUNC2|IOCON_MODE_INACT));	// Set port 1, pin 5, to the 32 bit timer capture function, if using timer 1, set to digital mode
 	NVIC_SetPriority(SysTick_IRQn, 1);						// Give the SysTick function a lower priority
 	NVIC_SetPriority(TIMER_32_0_IRQn, 0);						// Ensure that the 32 bit timer capture interrupt has the highest priority
 	NVIC_ClearPendingIRQ(TIMER_32_0_IRQn);						// Ensure that there are no pending interrupts on TIMER_32_0_IRQn
