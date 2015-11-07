@@ -291,11 +291,6 @@ make_output_dir :
 # Write to flash of chip
 #-----------------------------------------------------------------------------#
 
-<<<<<<< HEAD
-writeflash: $(HEX)
-	 @echo $(HEX)
-	 lpc21isp -NXPARM $^ $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
-=======
 writeflash: all
 	@echo "Writing to" $(COMPORT)
 	@lpc21isp -NXPARM $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
@@ -307,7 +302,6 @@ writeflash: all
 com:
 	@echo "Opening" $(COMPORT)
 	picocom $(COMPORT)
->>>>>>> f0aa130a0ed6e23499cbd67c90e74948e5886b7a
 
 #=============================================================================#
 # make clean
