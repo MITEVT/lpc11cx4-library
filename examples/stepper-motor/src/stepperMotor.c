@@ -1,7 +1,5 @@
 #include "chip.h"
 #include "stepperMotor.h"
-#include "util.h"
-#include "string.h"
 
 void Stepper_StepCases(STEPPER_MOTOR_T *mot, int32_t step){
 	switch (step){
@@ -62,8 +60,6 @@ void Stepper_ZeroPosition(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
 void Stepper_HomePosition(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
 	Stepper_SetPosition(mot, 0, msTicks);
 }
-
-char str[32];
 
 STEPPER_STATE_T Stepper_Spin(STEPPER_MOTOR_T *mot, int32_t steps, volatile uint32_t msTicks) {
 	if (mot->zeroing) {
