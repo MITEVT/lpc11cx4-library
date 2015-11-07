@@ -1,14 +1,5 @@
 #include "chip.h"
 
-
-
-#define port 2
-#define pin0 2 //PINOUT 26
-#define pin1 3 //PINOUT 38
-#define pin2 7 //PINOUT 11
-#define pin3 8 //PINOUT 12
-
-
 //--------------------------------------------
 // The stepper motors used in 2015-2016 (VID29-02P D1437CDB1) do not make
 // full revolutions. They cover ~ 315 degrees, or 640 ticks
@@ -16,13 +7,24 @@
 // STEPPER_INIT SHOULD HAVE 640 AS AN INPUT FOR THESE
 //--------------------------------------------
 
+typedef struct _STEPPER_MOTOR_T_{
+	uint8_t ports[4];
+	uint8_t pins[4];
+	int32_t pos;
+	int64_t new_pos;
+	bool zeroing;
+	uint32_t ticks;
+	int32_t step_num;
+	uint32_t step_per_rotation;
+	uint32_t step_delay;
+} STEPPER_MOTOR_T;
 
 /**
  * @brief	The different input sequences that step the motor
  * @param	Integer, 0-3, representing the step 
  * @return	Nothing
  */
-void Stepper_StepCases(int step);
+void Stepper_StepCases(STEPPER_MOTOR_T*, int32_t step);
 
 
 /**
@@ -30,63 +32,36 @@ void Stepper_StepCases(int step);
  * @param	Integer, number of steps in a full rotation
  * @return	Nothing
  */
-void Stepper_Init(int steps);
-
-/**
- * @brief	Gets stepper's position relative to zero
- * @param	None
- * @return	Integer, position from zero
- */
-int Stepper_Position(void);
-
-/**
- * @brief	Gets stepper's position relative to last stop
- * @param	None
- * @return	Integer, position from last stop
- */
-int Stepper_StepNumber(void);
-
-/**
- * @brief	Gets stepper's total ticks per full rotation
- * @param	None
- * @return	Integer, ticks per rotation
- */
-int Stepper_TotalTicks(void);
+void Stepper_Init(STEPPER_MOTOR_T*);
 
 /**
  * @brief	Moves stepper to inputted location
  * @param	Integer, percentage you want stepper to cover
  * @return	Nothing
  */
-void Stepper_ChoosePosition(int percent);
+void Stepper_ChoosePosition(STEPPER_MOTOR_T*, uint8_t percent, volatile uint32_t msTicks);
 
 /**
  * @brief	Initially gets timer to 0 position
  * @param	None
  * @return	Nothing
  */
-void Stepper_ZeroPosition(void);
+void Stepper_ZeroPosition(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
 
 /**
  * @brief	Gets timer to 0 position after initialization
  * @param	None
  * @return	Nothing
  */
-void Stepper_HomePosition(void);
+void Stepper_HomePosition(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
 
-/**
- * @brief	Sets delay so timer goes at certain speed in revolutions per minute
- * @param	Integer, speed in rpm up to 46
- * @return	Nothing
- */
-void Stepper_SetSpeed(int speed);
+void Stepper_Spin(STEPPER_MOTOR_T*, int32_t steps, volatile uint32_t msTicks);
 
 /**
  * @brief	Moves timer a certain number of step forward/backwards
  * @param	Steps to move; forward if positive, backwards if negative
  * @return	Nothing
  */
-void Stepper_Step(int steps);
-
+void Stepper_Step(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
 
 
