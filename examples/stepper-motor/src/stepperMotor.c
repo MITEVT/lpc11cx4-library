@@ -1,5 +1,7 @@
 #include "chip.h"
 #include "stepperMotor.h"
+#include "util.h"
+#include "string.h"
 
 void Stepper_StepCases(STEPPER_MOTOR_T *mot, int32_t step){
 	switch (step){
@@ -33,7 +35,7 @@ void Stepper_StepCases(STEPPER_MOTOR_T *mot, int32_t step){
 void Stepper_Init(STEPPER_MOTOR_T *mot){
 
 	//Initializes pins
-	Chip_GPIO_Init(LPC_GPIO);
+	// Chip_GPIO_Init(LPC_GPIO);
 	Chip_GPIO_WriteDirBit(LPC_GPIO, mot->ports[0], mot->pins[0], true);
 	Chip_GPIO_WriteDirBit(LPC_GPIO, mot->ports[1], mot->pins[1], true);
 	Chip_GPIO_WriteDirBit(LPC_GPIO, mot->ports[2], mot->pins[2], true);
@@ -46,7 +48,7 @@ void Stepper_Init(STEPPER_MOTOR_T *mot){
 
 }
 
-void Stepper_ChoosePosition(STEPPER_MOTOR_T *mot, uint8_t percent, volatile uint32_t msTicks){
+void Stepper_SetPosition(STEPPER_MOTOR_T *mot, uint8_t percent, volatile uint32_t msTicks){
 	int32_t turn = (percent * mot->step_per_rotation) / 100;
 	Stepper_Spin(mot, turn - mot->pos, msTicks);
 }
@@ -58,76 +60,50 @@ void Stepper_ZeroPosition(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
 }
 
 void Stepper_HomePosition(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
-	Stepper_Spin(mot, mot->pos * -1, msTicks);
+	Stepper_SetPosition(mot, 0, msTicks);
 }
 
-void Stepper_Spin(STEPPER_MOTOR_T *mot, int32_t steps, volatile uint32_t msTicks){
-	mot->new_pos = steps - mot->pos;
+char str[32];
+
+STEPPER_STATE_T Stepper_Spin(STEPPER_MOTOR_T *mot, int32_t steps, volatile uint32_t msTicks) {
+	if (mot->zeroing) {
+		return ZEROING;
+	}
+	mot->new_pos = steps + mot->pos;
+	if (mot->new_pos > mot->step_per_rotation) mot->new_pos = mot->step_per_rotation;
+	if (mot->new_pos < 0) mot->new_pos = 0;
 	mot->ticks =  msTicks; 
+	return MOVING;
 }
 
-void Stepper_Step(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
+STEPPER_STATE_T Stepper_Step(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
 	if (mot->new_pos != mot->pos){
 		if (msTicks - mot->ticks >= mot->step_delay){
 			mot->ticks = msTicks;
 			if (mot->new_pos > mot->pos){
 				mot->step_num++;
 				mot->pos++;
-				Stepper_StepCases(mot, mot->step_num%4);	
+				Stepper_StepCases(mot, ((mot->step_num < 0) ? mot->step_num * -1 : mot->step_num) % 4);	
 			} else {
 				mot->step_num--;
 				mot->pos--;
-				Stepper_StepCases(mot, mot->step_num%4);	
+				Stepper_StepCases(mot, ((mot->step_num < 0) ? mot->step_num * -1 : mot->step_num) % 4);	
 			}
-			if (mot->zeroing && mot->pos == mot->new_pos){
-				mot->zeroing = false;
-				mot->pos = 0;
-				mot->new_pos = 0;
+			if (mot->zeroing) {
+				if (mot->pos <= mot->new_pos){
+					mot->zeroing = false;
+					mot->pos = 0;
+					mot->new_pos = 0;
+				}
+				return ZEROING;
+			} else {
+				return MOVING;
 			}
 		} 
-	}
+	} 
+
+	return STOPPED;
 	
 }
-
-
-
-
-//TEST CODE BELOW ---------------------------------------
-
-// int main(void){
-
-// 	SystemCoreClockUpdate();
-
-
-// 	if (SysTick_Config (SystemCoreClock / 1000)) {
-// 		//Error
-// 		while(1);
-// 	}
-
-
-// 	Stepper_Init(640);
-// 	Stepper_ZeroPosition();
-// 	Stepper_SetSpeed(46);
-// 	Delay(150);
-
-	
-// 	while(1){
-		
-// 		Stepper_ChoosePosition(75);
-// 		Delay(100);
-		
-// 		Stepper_Step(320);
-// 		Delay(100);	
-		
-// 		Stepper_Step(80);
-// 		Delay(100);
-
-// 		Stepper_Step(160)
-// 		Stepper_ZeroPosition();
-// 	}
-
-
-
-// }
 
 

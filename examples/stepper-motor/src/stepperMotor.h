@@ -11,13 +11,17 @@ typedef struct _STEPPER_MOTOR_T_{
 	uint8_t ports[4];
 	uint8_t pins[4];
 	int32_t pos;
-	int64_t new_pos;
+	int32_t new_pos;
 	bool zeroing;
 	uint32_t ticks;
 	int32_t step_num;
-	uint32_t step_per_rotation;
+	int32_t step_per_rotation;
 	uint32_t step_delay;
 } STEPPER_MOTOR_T;
+
+typedef enum _STEPPER_MOTOR_STATE_T_ {
+	STOPPED, MOVING, ZEROING
+} STEPPER_STATE_T;
 
 /**
  * @brief	The different input sequences that step the motor
@@ -39,7 +43,7 @@ void Stepper_Init(STEPPER_MOTOR_T*);
  * @param	Integer, percentage you want stepper to cover
  * @return	Nothing
  */
-void Stepper_ChoosePosition(STEPPER_MOTOR_T*, uint8_t percent, volatile uint32_t msTicks);
+void Stepper_SetPosition(STEPPER_MOTOR_T*, uint8_t percent, volatile uint32_t msTicks);
 
 /**
  * @brief	Initially gets timer to 0 position
@@ -55,13 +59,13 @@ void Stepper_ZeroPosition(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
  */
 void Stepper_HomePosition(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
 
-void Stepper_Spin(STEPPER_MOTOR_T*, int32_t steps, volatile uint32_t msTicks);
+STEPPER_STATE_T Stepper_Spin(STEPPER_MOTOR_T*, int32_t steps, volatile uint32_t msTicks);
 
 /**
  * @brief	Moves timer a certain number of step forward/backwards
  * @param	Steps to move; forward if positive, backwards if negative
  * @return	Nothing
  */
-void Stepper_Step(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
+STEPPER_STATE_T Stepper_Step(STEPPER_MOTOR_T*, volatile uint32_t msTicks);
 
 
