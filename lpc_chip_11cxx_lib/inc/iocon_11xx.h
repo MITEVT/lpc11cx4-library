@@ -65,7 +65,7 @@ typedef enum CHIP_IOCON_PIO {
 	IOCON_PIO0_7 = (0x050 >> 2),
 	IOCON_PIO0_8 = (0x060 >> 2),
 	IOCON_PIO0_9 = (0x064 >> 2),
-	IOCON_PIO0_10 = (0x070 >> 2),
+	IOCON_PIO0_10 = (0x068 >> 2),
 	IOCON_PIO0_11 = (0x074 >> 2),
 
 	IOCON_PIO1_0 = (0x078 >> 2),
