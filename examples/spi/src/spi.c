@@ -17,26 +17,26 @@ const uint32_t OscRateIn = 12000000;
 #define SSPIRQHANDLER     SSP0_IRQHandler
 
 
-#define LED_PIN 7
+#define LED_PIN 5
 /* Tx buffer */
-static uint8_t Tx_Buf[BUFFER_SIZE];
+//static uint8_t Tx_Buf[BUFFER_SIZE];
 
 /* Rx buffer */
-static uint8_t Rx_Buf[BUFFER_SIZE];
+//static uint8_t Rx_Buf[BUFFER_SIZE];
 
-static SSP_ConfigFormat ssp_format;
+/*static SSP_ConfigFormat ssp_format;
 static Chip_SSP_DATA_SETUP_T xf_setup;
-static volatile uint8_t  isXferCompleted = 0;
+static volatile uint8_t  isXferCompleted = 0;*/
 
-static void Init_SSP_PinMux(void) {
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_8, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* MISO0 */
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_9, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* MOSI0 */
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_2, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* SSEL0 */
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO2_11, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* SCK0 */
-	Chip_IOCON_PinLocSel(LPC_IOCON, IOCON_SCKLOC_PIO2_11);
-}
+//static void Init_SSP_PinMux(void) {
+//	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO2_2, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* MISO0 */
+//	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO2_3, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* MOSI0 */
+//	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO2_0, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* SSEL0 */
+//	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO2_1, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* SCK0 */
+//	Chip_IOCON_PinLocSel(LPC_IOCON, IOCON_SCKLOC_PIO2_11);
+//}
 
-static void Buffer_Init(void)
+/*static void Buffer_Init(void)
 {
 	uint16_t i;
 	uint8_t ch = 0;
@@ -45,7 +45,7 @@ static void Buffer_Init(void)
 		Tx_Buf[i] = 0x01;
 		Rx_Buf[i] = 0xAA;
 	}
-}
+} */
 
 static void GPIO_Config(void) {
 	Chip_GPIO_Init(LPC_GPIO);
@@ -53,16 +53,17 @@ static void GPIO_Config(void) {
 }
 
 static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 0, LED_PIN, true);
+	Chip_GPIO_WriteDirBit(LPC_GPIO, 2, LED_PIN, true);
 
 }
 
 static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, true);
+	Chip_GPIO_SetPinState(LPC_GPIO, 2, LED_PIN, true);
+	//Chip_UART_SendBlocking(LPC_USART, "LED_ON", 6);
 }
 
 static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, false);
+	Chip_GPIO_SetPinState(LPC_GPIO, 2, LED_PIN, false);
 }
 
 /**
@@ -73,13 +74,20 @@ int main(void)
 {
 	SystemCoreClockUpdate();
 
+	if (SysTick_Config (SystemCoreClock / 1000)) {
+		//Error
+		while(1);
+	}
+
 	/* LED Initialization */
 	GPIO_Config();
 	LED_Config();
+	LED_On();
+
 
 
 	/* SSP initialization */
-	Init_SSP_PinMux();
+	/*Init_SSP_PinMux();
 	Chip_SSP_Init(LPC_SSP);
 	Chip_SSP_SetBitRate(LPC_SSP, 30000);
 
@@ -95,11 +103,11 @@ int main(void)
 
 	LED_On();
 
-	int i;
+	int i; */
 
 	while (1) {
-		Chip_SSP_WriteFrames_Blocking(LPC_SSP, Tx_Buf, BUFFER_SIZE);
-		for(i=0; i< 0xFFFF; i++);
+		/*Chip_SSP_WriteFrames_Blocking(LPC_SSP, Tx_Buf, BUFFER_SIZE);
+		for(i=0; i< 0xFFFF; i++);*/
 
 	}
 	return 0;
