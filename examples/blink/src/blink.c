@@ -3,7 +3,10 @@
 
 const uint32_t OscRateIn = 12000000;
 
-#define LED_PIN 10
+#define LED0 2, 5
+#define LED1 0, 6
+#define LED2 0, 7
+#define LED3 2, 9
 
 volatile uint32_t msTicks;
 
@@ -11,27 +14,22 @@ void SysTick_Handler(void) {
 	msTicks++;
 }
 
-__INLINE static void Delay(uint32_t dlyTicks) {
+static void Delay(uint32_t dlyTicks) {
 	uint32_t curTicks = msTicks;
 	while ((msTicks - curTicks) < dlyTicks);
 }
 
-__INLINE static void GPIO_Config(void) {
+static void GPIO_Config(void) {
 	Chip_GPIO_Init(LPC_GPIO);
 
 }
 
-__INLINE static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 2, LED_PIN, true);
-
+static void LED_Init(uint8_t port, uint8_t pin) {
+	Chip_GPIO_WriteDirBit(LPC_GPIO, port, pin, true);
 }
 
-__INLINE static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 2, LED_PIN, true);
-}
-
-__INLINE static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 2, LED_PIN, false);
+static void LED_Write(uint8_t port, uint8_t pin, uint8_t val) {
+	Chip_GPIO_SetPinState(LPC_GPIO, port, pin, val);
 }
 
 int main (void) {
@@ -45,12 +43,23 @@ int main (void) {
 	}
 
 	GPIO_Config();
-	LED_Config();
+	LED_Init(LED0);
+	LED_Init(LED1);
+	LED_Init(LED2);
+	LED_Init(LED3);
 
 	while(1) {
-		LED_On();
+		LED_Write(LED3, false);
+		LED_Write(LED0, true);
 		Delay(1000);
-		LED_Off();
+		LED_Write(LED0, false);
+		LED_Write(LED1, true);
+		Delay(1000);
+		LED_Write(LED1, false);
+		LED_Write(LED2, true);
+		Delay(1000);
+		LED_Write(LED2, false);
+		LED_Write(LED3, true);
 		Delay(1000);
 	}
 }
