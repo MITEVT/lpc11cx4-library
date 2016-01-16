@@ -53,18 +53,24 @@ int main (void) {
 
 	GPIO_Config();
 
+	uint8_t i = 1;
+	uint16_t delay = 500;
+
 	while(1) {
+		i = 1 - i;
+		delay = (i) ? 500 : 250;
+
 		LED_Write(LED3, false);
 		LED_Write(LED0, true);
-		Delay(1000);
+		Delay(delay);
 		LED_Write(LED0, false);
 		LED_Write(LED1, true);
-		Delay(1000);
+		Delay(delay);
 		LED_Write(LED1, false);
 		LED_Write(LED2, true);
-		Delay(1000);
+		Delay(delay);
 		LED_Write(LED2, false);
 		LED_Write(LED3, true);
-		Delay(1000);
+		Delay(delay);
 	}
 }
