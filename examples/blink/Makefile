@@ -293,7 +293,7 @@ make_output_dir :
 
 writeflash: all
 	@echo "Writing to" $(COMPORT)
-	@lpc21isp -NXPARM $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
+	@lpc21isp -NXPARM -control $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #-----------------------------------------------------------------------------#
 # Open up in picocom
@@ -301,7 +301,8 @@ writeflash: all
 
 com:
 	@echo "Opening" $(COMPORT)
-	picocom $(COMPORT)
+	# @picocom -b 9600 $(COMPORT)
+	@lpc21isp -NXPARM -control -termonly $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #=============================================================================#
 # make clean

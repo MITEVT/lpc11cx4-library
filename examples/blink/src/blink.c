@@ -26,6 +26,8 @@ static void GPIO_Config(void) {
 
 static void LED_Init(uint8_t port, uint8_t pin) {
 	Chip_GPIO_WriteDirBit(LPC_GPIO, port, pin, true);
+	Chip_GPIO_SetPinState(LPC_GPIO, port, pin, false);
+
 }
 
 static void LED_Write(uint8_t port, uint8_t pin, uint8_t val) {
@@ -42,11 +44,14 @@ int main (void) {
 		while(1);
 	}
 
-	GPIO_Config();
+	
+
 	LED_Init(LED0);
 	LED_Init(LED1);
 	LED_Init(LED2);
 	LED_Init(LED3);
+
+	GPIO_Config();
 
 	while(1) {
 		LED_Write(LED3, false);
