@@ -30,7 +30,7 @@ static uint8_t i2c_rx_buf[100];
 static uint8_t i2c_tx_buf[100];
 
 uint8_t rx_buf[8];
-char print_buf[32];
+static char print_buf[32];
 char cmd_buf[20];
 uint8_t cmd_count = 0;
 
@@ -105,11 +105,6 @@ int main(void)
 
 	// End of Initialization
 	Chip_GPIO_SetPinState(LPC_GPIO, LED1, 1);
-	// printnum(LPC_I2C->SCLH, print_buf, 10);
-	// println("");
-	// printnum(LPC_I2C->SCLL, print_buf, 10);
-	// println("");
-	
 	print(">");
 
 	// Main loop
@@ -124,9 +119,18 @@ int main(void)
 					i2c_tx_buf[0] = 0;
 					xfer.txSz = 1;
 					xfer.rxSz = 0;
-					int i = Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
+					println("Sending...");
+					// int i = Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
+					int i = Chip_I2C_MasterCmdRead(I2C0, xfer.slaveAddr, 0x01, i2c_rx_buf, 1);
+					printnum(i2c_rx_buf[0], print_buf, 16);
+					println(" ");
 					printnum(i, print_buf, 10);
 				} else if (cmd_buf[0] == 'a') {
+					i2c_tx_buf[0] = 0x01;
+					i2c_tx_buf[1] = 0xFF;
+					xfer.txSz = 2;
+					int i = Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
+					printnum(i, print_buf, 10);
 				} else if (cmd_buf[0] == '\0') {
 				} else {
 					print("Unknown command.");

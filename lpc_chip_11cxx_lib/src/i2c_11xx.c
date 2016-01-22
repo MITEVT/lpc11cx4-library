@@ -39,7 +39,7 @@
 
 /* Control flags */
 #define I2C_CON_FLAGS (I2C_CON_AA | I2C_CON_SI | I2C_CON_STO | I2C_CON_STA)
-#define LPC_I2Cx(id)      ((LPC_I2C))
+#define LPC_I2Cx(id)      ((i2c.ip))
 #define SLAVE_ACTIVE(iic) (((iic)->flags & 0xFF00) != 0)
 
 /* I2C common interface structure */
@@ -60,9 +60,8 @@ struct i2c_slave_interface {
 };
 
 /* I2C interfaces */
-static struct i2c_interface i2c[I2C_NUM_INTERFACE] = {
-	{LPC_I2C, SYSCTL_CLOCK_I2C, Chip_I2C_EventHandler, NULL, NULL, NULL, 0}
-};
+static struct i2c_interface i2c = 
+	{LPC_I2C, SYSCTL_CLOCK_I2C, Chip_I2C_EventHandler, NULL, NULL, NULL, 0};
 
 static struct i2c_slave_interface i2c_slave[I2C_NUM_INTERFACE][I2C_SLAVE_NUM_INTERFACE];
 
@@ -76,12 +75,12 @@ static struct i2c_slave_interface i2c_slave[I2C_NUM_INTERFACE][I2C_SLAVE_NUM_INT
  
 STATIC INLINE void enableClk(I2C_ID_T id)
 {
-	Chip_Clock_EnablePeriphClock(i2c[id].clk);
+	Chip_Clock_EnablePeriphClock(i2c.clk);
 }
 
 STATIC INLINE void disableClk(I2C_ID_T id)
 {
-	Chip_Clock_DisablePeriphClock(i2c[id].clk);
+	Chip_Clock_DisablePeriphClock(i2c.clk);
 }
 
 /* Get the ADC Clock Rate */
@@ -177,7 +176,6 @@ STATIC I2C_SLAVE_ID lookupSlaveIndex(LPC_I2C_T *pI2C, uint8_t slaveAddr)
 int handleMasterXferState(LPC_I2C_T *pI2C, I2C_XFER_T  *xfer)
 {
 	uint32_t cclr = I2C_CON_FLAGS;
-
 	switch (getCurState(pI2C)) {
 	case 0x08:		/* Start condition on bus */
 	case 0x10:		/* Repeated start condition */
@@ -227,6 +225,7 @@ int handleMasterXferState(LPC_I2C_T *pI2C, I2C_XFER_T  *xfer)
 		xfer->status = I2C_STATUS_BUSERR;
 		cclr &= ~I2C_CON_STO;
 	}
+
 
 	/* Set clear control flags */
 	pI2C->CONSET = cclr ^ I2C_CON_FLAGS;
@@ -328,7 +327,7 @@ int handleSlaveXferState(LPC_I2C_T *pI2C, I2C_XFER_T *xfer)
 /* Chip event handler interrupt based */
 void Chip_I2C_EventHandler(I2C_ID_T id, I2C_EVENT_T event)
 {
-	struct i2c_interface *iic = &i2c[id];
+	struct i2c_interface *iic = &i2c;
 	volatile I2C_STATUS_T *stat;
 
 	/* Only WAIT event needs to be handled */
@@ -338,13 +337,14 @@ void Chip_I2C_EventHandler(I2C_ID_T id, I2C_EVENT_T event)
 
 	stat = &iic->mXfer->status;
 	/* Wait for the status to change */
-	while (*stat == I2C_STATUS_BUSY) {}
+	while (*stat == I2C_STATUS_BUSY) {
+	}
 }
 
 /* Chip polling event handler */
 void Chip_I2C_EventHandlerPolling(I2C_ID_T id, I2C_EVENT_T event)
 {
-	struct i2c_interface *iic = &i2c[id];
+	struct i2c_interface *iic = &i2c;
 	volatile I2C_STATUS_T *stat;
 
 	/* Only WAIT event needs to be handled */
@@ -364,12 +364,20 @@ void Chip_I2C_EventHandlerPolling(I2C_ID_T id, I2C_EVENT_T event)
 /* Initializes the LPC_I2C peripheral with specified parameter */
 void Chip_I2C_Init(I2C_ID_T id)
 {
+
+	i2c.ip = LPC_I2C;
+	i2c.clk = SYSCTL_CLOCK_I2C;
+	i2c.mEvent = Chip_I2C_EventHandler;
+	i2c.sEvent = NULL;
+	i2c.mXfer = NULL;
+	i2c.sXfer = NULL;
+	i2c.flags = 0;
+
+
 	enableClk(id);
 
 	/* Set I2C operation to default */
 	LPC_I2Cx(id)->CONCLR = (I2C_CON_AA | I2C_CON_SI | I2C_CON_STA | I2C_CON_I2EN);
-	// LPC_I2C->CONCLR = (I2C_CON_AA | I2C_CON_SI | I2C_CON_STA | I2C_CON_I2EN);
-	// i2c[I2C0].ip->CONCLR = (I2C_CON_AA | I2C_CON_SI | I2C_CON_STA | I2C_CON_I2EN);
 }
 
 /* De-initializes the I2C peripheral registers to their default reset values */
@@ -400,7 +408,7 @@ uint32_t Chip_I2C_GetClockRate(I2C_ID_T id)
 /* Set the master event handler */
 int Chip_I2C_SetMasterEventHandler(I2C_ID_T id, I2C_EVENTHANDLER_T event)
 {
-	struct i2c_interface *iic = &i2c[id];
+	struct i2c_interface *iic = &i2c; 
 	if (!iic->mXfer) {
 		iic->mEvent = event;
 	}
@@ -410,23 +418,22 @@ int Chip_I2C_SetMasterEventHandler(I2C_ID_T id, I2C_EVENTHANDLER_T event)
 /* Get the master event handler */
 I2C_EVENTHANDLER_T Chip_I2C_GetMasterEventHandler(I2C_ID_T id)
 {
-	return i2c[id].mEvent;
+	return i2c.mEvent;
 }
 
 /* Transmit and Receive data in master mode */
 int Chip_I2C_MasterTransfer(I2C_ID_T id, I2C_XFER_T *xfer)
 {
-	struct i2c_interface *iic = &i2c[id];
+	struct i2c_interface *iic = &i2c;
 
-	iic->mEvent(id, I2C_EVENT_LOCK);
+	i2c.mEvent(id, I2C_EVENT_LOCK);
 	xfer->status = I2C_STATUS_BUSY;
 	iic->mXfer = xfer;
-
 	/* If slave xfer not in progress */
 	if (!iic->sXfer) {
 		startMasterXfer(iic->ip);
-	}
-	iic->mEvent(id, I2C_EVENT_WAIT);
+	} 
+	i2c.mEvent(id, I2C_EVENT_WAIT);
 	iic->mXfer = 0;
 
 	/* Wait for stop condition to appear on bus */
@@ -437,7 +444,7 @@ int Chip_I2C_MasterTransfer(I2C_ID_T id, I2C_XFER_T *xfer)
 		startSlaverXfer(iic->ip);
 	}
 
-	iic->mEvent(id, I2C_EVENT_UNLOCK);
+	i2c.mEvent(id, I2C_EVENT_UNLOCK);
 	return (int) xfer->status;
 }
 
@@ -448,6 +455,7 @@ int Chip_I2C_MasterSend(I2C_ID_T id, uint8_t slaveAddr, const uint8_t *buff, uin
 	xfer.slaveAddr = slaveAddr;
 	xfer.txBuff = buff;
 	xfer.txSz = len;
+	xfer.rxSz = 0;
 	while (Chip_I2C_MasterTransfer(id, &xfer) == I2C_STATUS_ARBLOST) {}
 	return len - xfer.txSz;
 }
@@ -481,14 +489,14 @@ int Chip_I2C_MasterRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t *buff, int len)
 /* Check if master state is active */
 int Chip_I2C_IsMasterActive(I2C_ID_T id)
 {
-	return isMasterState(i2c[id].ip);
+	return isMasterState(i2c.ip);
 }
 
 /* State change handler for master transfer */
 void Chip_I2C_MasterStateHandler(I2C_ID_T id)
 {
-	if (!handleMasterXferState(i2c[id].ip, i2c[id].mXfer)) {
-		i2c[id].mEvent(id, I2C_EVENT_DONE);
+	if (!handleMasterXferState(i2c.ip, i2c.mXfer)) {
+		i2c.mEvent(id, I2C_EVENT_DONE);
 	}
 }
 
@@ -499,7 +507,7 @@ void Chip_I2C_SlaveSetup(I2C_ID_T id,
 						 I2C_EVENTHANDLER_T event,
 						 uint8_t addrMask)
 {
-	struct i2c_interface *iic = &i2c[id];
+	struct i2c_interface *iic = &i2c;
 	struct i2c_slave_interface *si2c = &i2c_slave[id][sid];
 	si2c->xfer = xfer;
 	si2c->event = event;
@@ -519,7 +527,7 @@ void Chip_I2C_SlaveSetup(I2C_ID_T id,
 void Chip_I2C_SlaveStateHandler(I2C_ID_T id)
 {
 	int ret;
-	struct i2c_interface *iic = &i2c[id];
+	struct i2c_interface *iic = &i2c;
 
 	/* Get the currently addressed slave */
 	if (!iic->sXfer) {
