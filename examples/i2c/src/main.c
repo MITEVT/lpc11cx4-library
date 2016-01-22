@@ -89,10 +89,10 @@ int main(void)
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_4, IOCON_FUNC1); // SCL
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_5, IOCON_FUNC1); // SDA
 
+	LPC_SYSCTL->SYSAHBCLKCTRL |= 0x20; 	// Enable clock and power to I2C block
 	Chip_I2C_Init(I2C0);
 	Chip_I2C_SetClockRate(I2C0, 100000);
-	LPC_I2C->SCLL = 60;
-	LPC_I2C->SCLH = 60;
+
 	Chip_I2C_SetMasterEventHandler(I2C0, Chip_I2C_EventHandler);
 	NVIC_EnableIRQ(I2C0_IRQn);
 
@@ -100,17 +100,15 @@ int main(void)
 	xfer.rxBuff = i2c_rx_buf;
 	xfer.slaveAddr = 0x64;
 
-
 	uint32_t heartbeat_ticks = msTicks;
 	uint8_t heartbeat_flag = 0;
 
 	// End of Initialization
 	Chip_GPIO_SetPinState(LPC_GPIO, LED1, 1);
-	printnum(LPC_I2C->SCLH, print_buf, 10);
-	println("");
-	printnum(LPC_I2C->SCLL, print_buf, 10);
-	println("");
-	printnum(SystemCoreClock/100000, print_buf, 10);
+	// printnum(LPC_I2C->SCLH, print_buf, 10);
+	// println("");
+	// printnum(LPC_I2C->SCLL, print_buf, 10);
+	// println("");
 	
 	print(">");
 
