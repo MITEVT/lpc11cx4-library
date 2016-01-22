@@ -26,8 +26,8 @@ const uint32_t OscRateIn = 0000000;
 volatile uint32_t msTicks;
 
 static I2C_XFER_T xfer;
-static uint8_t i2c_rx_buf[100];
-static uint8_t i2c_tx_buf[100];
+static uint8_t i2c_rx_buf[20];
+static uint8_t i2c_tx_buf[20];
 
 uint8_t rx_buf[8];
 static char print_buf[32];
@@ -85,11 +85,12 @@ int main(void)
 
 	// Initialize I2C
 
-	Chip_SYSCTL_PeriphReset(RESET_I2C0);
+	Chip_SYSCTL_PeriphReset(RESET_I2C0); // Reset the I2C Peripheral
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_4, IOCON_FUNC1); // SCL
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_5, IOCON_FUNC1); // SDA
 
-	LPC_SYSCTL->SYSAHBCLKCTRL |= 0x20; 	// Enable clock and power to I2C block
+	// LPC_SYSCTL->SYSAHBCLKCTRL |= 0x20; 	// Enable clock and power to I2C block
+	Chip_SYSCTL_DeassertPeriphReset(RESET_I2C0);
 	Chip_I2C_Init(I2C0);
 	Chip_I2C_SetClockRate(I2C0, 100000);
 
@@ -113,27 +114,24 @@ int main(void)
 		if ((count = Chip_UART_Read(LPC_USART, rx_buf, 8)) != 0) {
 			Chip_UART_SendBlocking(LPC_USART, rx_buf, count);
 			if (rx_buf[0] == '\r' || rx_buf[0] == '\n') {
-				if (cmd_buf[0] == 'h') {
-					print("h - Help Prompt.");
-				} else if (cmd_buf[0] == 's') {
-					i2c_tx_buf[0] = 0;
-					xfer.txSz = 1;
-					xfer.rxSz = 0;
-					println("Sending...");
-					// int i = Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
-					int i = Chip_I2C_MasterCmdRead(I2C0, xfer.slaveAddr, 0x01, i2c_rx_buf, 1);
-					printnum(i2c_rx_buf[0], print_buf, 16);
-					println(" ");
-					printnum(i, print_buf, 10);
-				} else if (cmd_buf[0] == 'a') {
-					i2c_tx_buf[0] = 0x01;
-					i2c_tx_buf[1] = 0xFF;
-					xfer.txSz = 2;
-					int i = Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
-					printnum(i, print_buf, 10);
-				} else if (cmd_buf[0] == '\0') {
-				} else {
-					print("Unknown command.");
+				switch(cmd_buf[0]) {
+					case 'h':
+						println("h - Help Prompt.");
+						println("s - Read Address 0x01");
+						print("a - Write 0xFF to address 0x01");
+						break;
+					case 's':
+						Chip_I2C_MasterCmdRead(I2C0, xfer.slaveAddr, 0x01, i2c_rx_buf, 1);
+						printnum(i2c_rx_buf[0], print_buf, 16);
+						break;
+					case 'a':
+						i2c_tx_buf[0] = 0x01;
+						i2c_tx_buf[1] = 0xFF;
+						xfer.txSz = 2;
+						Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
+						break;
+					default:
+						print("Unknown Command.");
 				}
 				println("");
 				print(">");
@@ -142,8 +140,6 @@ int main(void)
 			} else {
 				memcpy(cmd_buf + cmd_count, rx_buf, count);
 			}
-			
-        
 		}
 
 		if (msTicks - heartbeat_ticks > 500) {
