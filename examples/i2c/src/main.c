@@ -25,6 +25,10 @@ const uint32_t OscRateIn = 0000000;
 
 volatile uint32_t msTicks;
 
+static I2C_XFER_T xfer;
+static uint8_t i2c_rx_buf[100];
+static uint8_t i2c_tx_buf[100];
+
 uint8_t rx_buf[8];
 char print_buf[32];
 char cmd_buf[20];
@@ -34,6 +38,19 @@ void SysTick_Handler(void) {
 	msTicks++;
 }
 
+/**
+ * @brief	I2C Interrupt Handler
+ * @return	None
+ */
+void I2C_IRQHandler(void)
+{
+	if (Chip_I2C_IsMasterActive(I2C0)) {
+		Chip_I2C_MasterStateHandler(I2C0);
+	}
+	else {
+		Chip_I2C_SlaveStateHandler(I2C0);
+	}
+}
 
 int main(void)
 {
@@ -73,10 +90,15 @@ int main(void)
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_5, IOCON_FUNC1); // SDA
 
 	Chip_I2C_Init(I2C0);
-	// Chip_I2C_SetClockRate(I2C0, 100000);
+	Chip_I2C_SetClockRate(I2C0, 100000);
+	LPC_I2C->SCLL = 60;
+	LPC_I2C->SCLH = 60;
+	Chip_I2C_SetMasterEventHandler(I2C0, Chip_I2C_EventHandler);
+	NVIC_EnableIRQ(I2C0_IRQn);
 
-	// Chip_I2C_SetMasterEventHandler(I2C0, Chip_I2C_EventHandler);
-	// NVIC_EnableIRQ(I2C0_IRQn);
+	xfer.txBuff = i2c_tx_buf;
+	xfer.rxBuff = i2c_rx_buf;
+	xfer.slaveAddr = 0x64;
 
 
 	uint32_t heartbeat_ticks = msTicks;
@@ -84,6 +106,12 @@ int main(void)
 
 	// End of Initialization
 	Chip_GPIO_SetPinState(LPC_GPIO, LED1, 1);
+	printnum(LPC_I2C->SCLH, print_buf, 10);
+	println("");
+	printnum(LPC_I2C->SCLL, print_buf, 10);
+	println("");
+	printnum(SystemCoreClock/100000, print_buf, 10);
+	
 	print(">");
 
 	// Main loop
@@ -95,6 +123,11 @@ int main(void)
 				if (cmd_buf[0] == 'h') {
 					print("h - Help Prompt.");
 				} else if (cmd_buf[0] == 's') {
+					i2c_tx_buf[0] = 0;
+					xfer.txSz = 1;
+					xfer.rxSz = 0;
+					int i = Chip_I2C_MasterSend(I2C0, xfer.slaveAddr, xfer.txBuff, xfer.txSz);
+					printnum(i, print_buf, 10);
 				} else if (cmd_buf[0] == 'a') {
 				} else if (cmd_buf[0] == '\0') {
 				} else {

@@ -39,7 +39,7 @@
 
 /* Control flags */
 #define I2C_CON_FLAGS (I2C_CON_AA | I2C_CON_SI | I2C_CON_STO | I2C_CON_STA)
-#define LPC_I2Cx(id)      ((i2c[id].ip))
+#define LPC_I2Cx(id)      ((LPC_I2C))
 #define SLAVE_ACTIVE(iic) (((iic)->flags & 0xFF00) != 0)
 
 /* I2C common interface structure */
@@ -87,7 +87,8 @@ STATIC INLINE void disableClk(I2C_ID_T id)
 /* Get the ADC Clock Rate */
 STATIC INLINE uint32_t getClkRate(void)
 {
-	return Chip_Clock_GetMainClockRate();
+	// return Chip_Clock_GetMainClockRate();
+	return SystemCoreClock;
 }
 
 /* Enable I2C and start master transfer */
@@ -367,6 +368,8 @@ void Chip_I2C_Init(I2C_ID_T id)
 
 	/* Set I2C operation to default */
 	LPC_I2Cx(id)->CONCLR = (I2C_CON_AA | I2C_CON_SI | I2C_CON_STA | I2C_CON_I2EN);
+	// LPC_I2C->CONCLR = (I2C_CON_AA | I2C_CON_SI | I2C_CON_STA | I2C_CON_I2EN);
+	// i2c[I2C0].ip->CONCLR = (I2C_CON_AA | I2C_CON_SI | I2C_CON_STA | I2C_CON_I2EN);
 }
 
 /* De-initializes the I2C peripheral registers to their default reset values */
