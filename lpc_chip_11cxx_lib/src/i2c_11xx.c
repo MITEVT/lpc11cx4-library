@@ -482,6 +482,7 @@ int Chip_I2C_MasterRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t *buff, int len)
 	xfer.slaveAddr = slaveAddr;
 	xfer.rxBuff = buff;
 	xfer.rxSz = len;
+	xfer.txSz = 0;
 	while (Chip_I2C_MasterTransfer(id, &xfer) == I2C_STATUS_ARBLOST) {}
 	return len - xfer.rxSz;
 }
