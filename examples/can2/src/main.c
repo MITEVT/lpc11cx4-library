@@ -14,6 +14,7 @@
 
 #define BUFFER_SIZE 8
 #define UART_RX_BUFFER_SIZE 8
+#define UART_RX_BUFFER_SIZE 8
 #define MCP_INT_PIN 0,11
 #define MCP_CS_PIN 2,10
 #define CLKOUT_DIV 1
@@ -28,9 +29,10 @@ CCAN_MSG_OBJ_T temp_msg;
 CCAN_MSG_OBJ_T send_msg;
 
 static char uart_rx_buf[UART_RX_BUFFER_SIZE];
-
+static uint16_t last_rx;
 
 uint8_t tmp;
+bool readTime;
 
 #define DEBUG_ENABLE
 
@@ -39,7 +41,7 @@ uint8_t tmp;
 	#define DEBUG_Write(str, count) Chip_UART_SendBlocking(LPC_USART, str, count)
 #else
 	#define DEBUG_Print(str)
-	#define DEBUG_Write(str, count) 
+	#define DEBUG_Write(str, count)
 #endif
 
 /*****************************************************************************
@@ -90,18 +92,26 @@ void Board_MCP2515_Init(void){
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO0_1, (IOCON_FUNC1 | IOCON_MODE_INACT));	/* CLKOUT */
 
 	MCP2515_Init(MCP_CS_PIN, MCP_INT_PIN);
-	MCP2515_SetBitRate(500, 12, 1);	
+	MCP2515_SetBitRate(500, 12, 1);
 
 	MCP2515_BitModify(RXB0CTRL, RXM_MASK, RXM_OFF);
-	MCP2515_BitModify(CANCTRL, MODE_MASK | CLKEN_MASK | CLKPRE_MASK, MODE_NORMAL | CLKEN_ENABLE | CLKPRE_CLKDIV_1);	
-	MCP2515_Read(CANCTRL, &tmp, 1);
-	Board_UART_PrintNum(tmp,2,true);
-
-
+	MCP2515_BitModify(CANCTRL, MODE_MASK | CLKEN_MASK | CLKPRE_MASK, MODE_LOOPBACK | CLKEN_ENABLE | CLKPRE_CLKDIV_1);
 }
 
-void Board_MCP2551_Check(uint8_t *tmp){
+void Board_MCP2515_Check(uint8_t *tmp){
 	MCP2515_Read(CANINTF, tmp, 1);
+}
+
+void Board_MCP2515_Enable_Interrupt(void){
+	Chip_GPIO_SetupPinInt(LPC_GPIO,0,11,GPIO_INT_FALLING_EDGE);
+	Chip_GPIO_EnableInt(LPC_GPIO,0,1<<11);
+	NVIC_EnableIRQ(EINT0_IRQn);
+}
+
+void PIOINT0_IRQHandler(void){
+	readTime = true;
+	Chip_GPIO_ClearInts(LPC_GPIO,0,1<<11);
+
 }
 
 int main(void)
@@ -126,24 +136,19 @@ int main(void)
 	Chip_UART_TXEnable(LPC_USART);
 	//---------------
 
-	DEBUG_Print("Started up\n\r");	
+	DEBUG_Print("Started up\n\r");
+	Chip_GPIO_Init(LPC_GPIO);
 	Board_MCP2515_Init();
-	uint8_t tmp;
-	MCP2515_Read(CANINTE, &tmp, 1);
-	Board_UART_PrintNum(tmp,2,true);
-	MCP2515_Read(TXRTSCTRL,&tmp,1);
-	Board_UART_PrintNum(tmp,2,true);
-
-	while (1) {	
-		Board_MCP2551_Check(&tmp);
-		if (tmp & 1){
+	Board_MCP2515_Enable_Interrupt();
+	while (1) {
+		if (readTime){
 			MCP2515_ReadBuffer(&temp_msg, 0);
 			Board_UART_Print("ID Received :");
 			Board_UART_Print("0x");
 			Board_UART_PrintNum(temp_msg.mode_id,16,true);
-
 			MCP2515_Read(CANINTF,&tmp,1);
 			MCP2515_Write(CANINTF,tmp & 0xFC);
+			readTime=false;
 		}
 
 		MCP2515_Read(EFLG,&tmp,1);
