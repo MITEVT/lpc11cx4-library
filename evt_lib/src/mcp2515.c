@@ -113,6 +113,7 @@ void MCP2515_Reset(void) {
 	Tx_Buf[0] = MCP2515_RESET; // Reset Command
 	Chip_SSP_WriteFrames_Blocking(LPC_SSP, Tx_Buf, 1);
 	set_gpio_pin_high(_cs_gpio, _cs_pin);
+	MCP2515_Mode(MODE_CONFIG);
 }
 
 int8_t MCP2515_GetFullReceiveBuffer(void) {
@@ -181,7 +182,7 @@ void MCP2515_ReadBuffer(CCAN_MSG_OBJ_T *msgobj, uint8_t bufferNum) {
 	xf_setup.rx_cnt = 0;
 	xf_setup.tx_cnt = 0;
 	Chip_SSP_RWFrames_Blocking(LPC_SSP, &xf_setup);
-	msgobj->mode_id = getIDFromBytes(Rx_Buf[1], Rx_Buf[2]);
+	msgobj->mode_id = (Rx_Buf[1]<<3) + ((Rx_Buf[2]>>5)&0x7);
 
 	msgobj->dlc = Rx_Buf[5] & 0x0F;
 	if (msgobj->dlc > 8)
