@@ -6,9 +6,9 @@
 
 #include "chip.h"
 
-const uint32_t OscRateIn = 0000000;
+const uint32_t OscRateIn = 0;
 
-#define LED_PIN 10
+#define LED0 2,8
 
 volatile uint32_t msTicks;
 
@@ -16,29 +16,6 @@ uint8_t Rx_Buf[8];
 
 void SysTick_Handler(void) {
 	msTicks++;
-}
-
-__INLINE static void Delay(uint32_t dlyTicks) {
-	uint32_t curTicks = msTicks;
-	while ((msTicks - curTicks) < dlyTicks);
-}
-
-__INLINE static void GPIO_Config(void) {
-	Chip_GPIO_Init(LPC_GPIO);
-
-}
-
-__INLINE static void LED_Config(void) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, 0, LED_PIN, true);
-
-}
-
-__INLINE static void LED_On(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, true);
-}
-
-__INLINE static void LED_Off(void) {
-	Chip_GPIO_SetPinState(LPC_GPIO, 0, LED_PIN, false);
 }
 
 int main(void)
@@ -62,23 +39,21 @@ int main(void)
 		while(1);
 	}
 
-	GPIO_Config();
-	LED_Config();
-	LED_On();
-    Chip_GPIO_WriteDirBit(LPC_GPIO, 2, 10, true);
+	Chip_GPIO_Init(LPC_GPIO);
+    	Chip_GPIO_WriteDirBit(LPC_GPIO, LED0, true);
     
-    uint8_t toggle = 0;
+	uint8_t toggle = 0;
 
-    while(1) {
+	while(1) {
 		uint8_t count;
 		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0) {
 			Chip_UART_SendBlocking(LPC_USART, Rx_Buf, count);
 			if (Rx_Buf[0] == 'q') {
                 		if (toggle == 0) {
-                    			Chip_GPIO_SetPinState(LPC_GPIO, 2, 10, false);
+                    			Chip_GPIO_SetPinState(LPC_GPIO, LED0, false);
                    			 toggle = 1;
                			 } else {
-                   			 Chip_GPIO_SetPinState(LPC_GPIO, 2, 10, true);
+                   			 Chip_GPIO_SetPinState(LPC_GPIO, LED0, true);
                    			 toggle = 0;
                			 }
                 
