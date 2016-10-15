@@ -56,12 +56,8 @@
 
 /* =================== FUNCTION PROTOS ================== */
 
-void LPC6804_Init();
+void ltc6804_init();
 
-void LPC6804_SetBitRate();
-
-void LPC6804_Reset(void);
-
-void LPC
+void ltc6804_calculate_pec(void);
 
 #endif
