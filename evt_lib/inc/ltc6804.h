@@ -62,5 +62,6 @@ void LPC6804_SetBitRate();
 
 void LPC6804_Reset(void);
 
+void LPC
 
 #endif
