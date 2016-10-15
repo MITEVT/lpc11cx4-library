@@ -54,8 +54,8 @@
 
 /* =================== FUNCTION PROTOS ================== */
 
-void ltc6804_init();
+void ltc6804_init(void);
 
-void ltc6804_calculate_pec(void);
+int16_t ltc6804_calculate_pec(char *data_bytes, uint8_t data_len);
 
 #endif
