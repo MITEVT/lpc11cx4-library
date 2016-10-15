@@ -3,8 +3,6 @@
 
 #include "lpc_types.h"
 
-#define LPC_SSP LPC_SSP1
-
 /* =================== COMMAND CODES ================== */
 
 #define WRCFG 0x001
