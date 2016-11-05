@@ -55,10 +55,24 @@
 #define ST_TWO_2KHZ_RES 0x6AAA
 #define ST_TWO_26HZ_RES 0x6AAA
 
+#define NUM_CELL_GROUPS 4
 /* =================== FUNCTION PROTOS ================== */
+
+typedef struct CELL_INFO {
+    uint16_t groupA[3];
+    uint16_t groupB[3];
+    uint16_t groupC[3];
+    uint16_t groupD[3];
+} CELL_INFO_T;
+
+typedef enum CELL_GROUP {
+    CELL_GROUP_A, CELL_GROUP_B, CELL_GROUP_C, CELL_GROUP_D
+} CELL_GROUPS_T;
 
 
 void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks);
 void LTC6804_ReadCFG(uint8_t *data, uint32_t msTicks);
+void LTC6804_ReadVoltageGroup(uint8_t *rx_buf, CELL_INFO_T *readings, CELL_GROUPS_T cg, uint32_t msTicks);
+void LTC6804_StartADC(uint32_t msTicks);
 
 #endif
