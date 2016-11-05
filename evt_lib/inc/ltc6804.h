@@ -7,6 +7,7 @@
 
 #define WRCFG 0x001
 #define RDCFG 0x002
+// [TODO] Precalculate Command PECs
 
 #define RDCVA 0x004
 #define RDCVB 0x006
@@ -27,6 +28,8 @@
 #define STCOMM 0x723
 
 /* =================== COMMAND BITS ================== */
+
+#define ADC_MODE_7KHZ 0x10
 
 #define ADC_CHN_ALL 0x0
 #define ADC_CHN_1_7 0x1
@@ -54,6 +57,8 @@
 
 /* =================== FUNCTION PROTOS ================== */
 
-uint16_t ltc6804_calculate_pec(uint8_t *data, uint8_t len);
+
+void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks);
+void LTC6804_ReadCFG(uint8_t *data, uint32_t msTicks);
 
 #endif
