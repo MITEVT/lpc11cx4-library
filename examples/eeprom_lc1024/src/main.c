@@ -1,11 +1,11 @@
 #include "chip.h"
 #include "util.h"
-#include "config.h"
 #include "lc1024.h"
 #include <string.h>
 
 const uint32_t OscRateIn = 0;
 
+#define SPI_BUFFER_SIZE 12
 #define SSP_IRQ           SSP1_IRQn
 #define SSPIRQHANDLER     SSP1_IRQHandler
 #define ADDR_LEN 3
@@ -78,9 +78,6 @@ int main(void) {
 		while(1); // error state
 	}
 
-    data[0] = 0xD;
-    data[1] = 0xD;
-
     address[0] = 0x0;
     address[1] = 0xF;
     address[2] = 0xF;
@@ -93,29 +90,45 @@ int main(void) {
     
     ZeroRxBuf();
 
-    LC1024_WriteDisable();
-
-    LC1024_ReadStatusReg(&Rx_Buf[0]);
-    Chip_UART_SendBlocking(LPC_USART, "ST reg before wenb:\n", 20);
-    PrintRxBuffer();
+    // LC1024_WriteDisable();
+    // LC1024_ReadStatusReg(&Rx_Buf[0]);
+    // PrintRxBuffer();
 
     LC1024_WriteEnable();
-
     LC1024_ReadStatusReg(&Rx_Buf[0]);
-    Chip_UART_SendBlocking(LPC_USART, "ST reg after wenb:\n", 19);
+    Chip_UART_SendBlocking(LPC_USART, "STATUS REG:\n", 12);
     PrintRxBuffer();
 
-    LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
-    Chip_UART_SendBlocking(LPC_USART, "ze mem before wmem:\n", 20);
-    PrintRxBuffer();
+    data[0] = 0xE;
+    data[1] = 0xE;
 
     LC1024_WriteMem(&address[0], &data[0], 2);
-    Chip_UART_SendBlocking(LPC_USART, "buf after write:\n", 14);
-    PrintRxBuffer();
+    Chip_UART_SendBlocking(LPC_USART, "writing D to memory...\n", 23);
+    // PrintRxBuffer();
 
     LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
-    Chip_UART_SendBlocking(LPC_USART, "mem read after write:\n", 22);
-    PrintRxBuffer();
+    
+    if(Rx_Buf[4] == 0xE) {
+        Chip_UART_SendBlocking(LPC_USART, "Passed write test 1!\n", 21);
+    } else {
+        Chip_UART_SendBlocking(LPC_USART, "Failed write test 1 :(\n", 23);
+        PrintRxBuffer();
+    }
+
+    data[0] = 0xA;
+    data[1] = 0xA;
+
+    LC1024_WriteMem(&address[0], &data[0], 2);
+    Chip_UART_SendBlocking(LPC_USART, "writing A to memory...\n", 23);
+
+    LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
+
+    if(Rx_Buf[5] == 0xA) {
+        Chip_UART_SendBlocking(LPC_USART, "Passed write test 2!\n", 21);
+    } else {
+        Chip_UART_SendBlocking(LPC_USART, "Failed write test 2 :(\n", 23);
+        PrintRxBuffer();
+    }
 
 	while(1) {
 		delay(5);

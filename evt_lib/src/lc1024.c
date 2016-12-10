@@ -1,7 +1,8 @@
 #include "chip.h"
-#include "config.h"
 #include "lc1024.h"
 #include <string.h>
+
+#define SPI_BUFFER_SIZE 12
 
 static uint8_t Tx_Buf[SPI_BUFFER_SIZE];
 static Chip_SSP_DATA_SETUP_T xf_setup;
@@ -75,6 +76,9 @@ void LC1024_ReadMem(uint8_t *address, uint8_t *rcv_buf, uint8_t len) {
 
 
 void LC1024_WriteMem(uint8_t *address, uint8_t *data, uint8_t len) {
+
+    LC1024_WriteEnable();
+    
     Tx_Buf[0] = WRITE_MEM_INSTR;
     Tx_Buf[1] = address[0];
     Tx_Buf[2] = address[1];

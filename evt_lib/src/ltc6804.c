@@ -1,7 +1,8 @@
 #include "chip.h"
-#include "config.h"
 #include "ltc6804.h"
 #include <string.h>
+
+#define SPI_BUFFER_SIZE 12
 
 static uint8_t CFG[6];
 static uint32_t _last_message = 2000;
