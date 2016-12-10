@@ -51,6 +51,7 @@ void LTC6804_LoadCFG(uint32_t msTicks) {
 	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 12);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
+
 void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks) {
 
 	_baud = baud;
