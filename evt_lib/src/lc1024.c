@@ -59,14 +59,14 @@ void LC1024_WriteDisable(void) {
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
-void LC1024_ReadMem(uint8_t *data, uint8_t len) {
+void LC1024_ReadMem(uint8_t *address, uint8_t *rcv_buf, uint8_t len) {
     Tx_Buf[0] = READ_MEM_INSTR;
-    Tx_Buf[1] = 0x0;
-    Tx_Buf[2] = 0xF;
-    Tx_Buf[3] = 0xF;
+    Tx_Buf[1] = address[0];
+    Tx_Buf[2] = address[1];
+    Tx_Buf[3] = address[2];
     ZeroTxBuf(4);
     xf_setup.length = 4+len; xf_setup.rx_cnt = 0; xf_setup.tx_cnt = 0;
-    xf_setup.rx_data = data;
+    xf_setup.rx_data = rcv_buf;
 
     Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
     Chip_SSP_RWFrames_Blocking(LPC_SSP1, &xf_setup);
@@ -74,17 +74,19 @@ void LC1024_ReadMem(uint8_t *data, uint8_t len) {
 }
 
 
-void LC1024_WriteMem(void) {
+void LC1024_WriteMem(uint8_t *address, uint8_t *data, uint8_t len) {
     Tx_Buf[0] = WRITE_MEM_INSTR;
-    Tx_Buf[1] = 0x0;
-    Tx_Buf[2] = 0xF;
-    Tx_Buf[3] = 0xF;
-    Tx_Buf[4] = 0xA;
-    Tx_Buf[5] = 0xA;
-    ZeroTxBuf(6);
+    Tx_Buf[1] = address[0];
+    Tx_Buf[2] = address[1];
+    Tx_Buf[3] = address[2];
+    uint8_t i;
+    for(i = 0; i < len; i++) {
+        Tx_Buf[4 + i] = data[i];
+    }
+    ZeroTxBuf(4+len);
 
     Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 6);
+	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 4+len);
     Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
