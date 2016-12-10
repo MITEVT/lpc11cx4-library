@@ -26,7 +26,7 @@ RM = rm -f
 #=============================================================================#
 
 # project name
-PROJECT = pwmcontact
+PROJECT = timer
 
 # core type
 CORE = cortex-m0
@@ -206,7 +206,7 @@ $(ELF) : $(LD_SCRIPT)
 
 $(ELF) : $(OBJS)
 	@echo 'Linking target: $(ELF)'
-	$(CXX) $(LD_FLAGS_F) $(OBJS) $(LIBS) -o $@
+	$(CC) $(LD_FLAGS_F) $(OBJS) $(LIBS) -o $@
 	@echo ' '
 
 #-----------------------------------------------------------------------------#
@@ -293,7 +293,7 @@ make_output_dir :
 
 writeflash: all
 	@echo "Writing to" $(COMPORT)
-	@lpc21isp -NXPARM $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
+	lpc21isp -NXPARM -control $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #-----------------------------------------------------------------------------#
 # Open up in picocom
@@ -301,7 +301,7 @@ writeflash: all
 
 com:
 	@echo "Opening" $(COMPORT)
-	picocom $(COMPORT)
+	lpc21isp -NXPARM -control -termonly $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #=============================================================================#
 # make clean

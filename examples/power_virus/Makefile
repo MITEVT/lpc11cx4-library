@@ -26,7 +26,7 @@ RM = rm -f
 #=============================================================================#
 
 # project name
-PROJECT = blink
+PROJECT = powervirus
 
 # core type
 CORE = cortex-m0
@@ -206,7 +206,7 @@ $(ELF) : $(LD_SCRIPT)
 
 $(ELF) : $(OBJS)
 	@echo 'Linking target: $(ELF)'
-	$(CC) $(LD_FLAGS_F) $(OBJS) $(LIBS) -o $@
+	$(CXX) $(LD_FLAGS_F) $(OBJS) $(LIBS) -o $@
 	@echo ' '
 
 #-----------------------------------------------------------------------------#

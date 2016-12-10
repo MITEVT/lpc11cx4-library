@@ -26,7 +26,7 @@ RM = rm -f
 #=============================================================================#
 
 # project name
-PROJECT = blink
+PROJECT = template
 
 # core type
 CORE = cortex-m0

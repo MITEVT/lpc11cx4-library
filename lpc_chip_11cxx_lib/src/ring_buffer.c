@@ -36,8 +36,8 @@
  * Private types/enumerations/variables
  ****************************************************************************/
 
-#define RB_INDH(rb)                ((rb)->head & ((rb)->count - 1))
-#define RB_INDT(rb)                ((rb)->tail & ((rb)->count - 1))
+#define RB_INDH(rb)                ((rb)->head % (rb)->count)
+#define RB_INDT(rb)                ((rb)->tail % (rb)->count)
 
 /*****************************************************************************
  * Public types/enumerations/variables
@@ -52,7 +52,7 @@
  ****************************************************************************/
 
 /* Initialize ring buffer */
-int RingBuffer_Init(RINGBUFF_T *RingBuff, void *buffer, int itemSize, int count)
+int RingBuffer_Init(RINGBUFF_T *RingBuff, void *buffer, uint32_t itemSize, uint32_t count)
 {
 	RingBuff->data = buffer;
 	RingBuff->count = count;
@@ -79,8 +79,9 @@ int RingBuffer_Insert(RINGBUFF_T *RingBuff, const void *data)
 }
 
 /* Insert multiple items into Ring Buffer */
-int RingBuffer_InsertMult(RINGBUFF_T *RingBuff, const void *data, int num)
+uint32_t RingBuffer_InsertMult(RINGBUFF_T *RingBuff, const void *data, int num)
 {
+
 	uint8_t *ptr = RingBuff->data;
 	int cnt1, cnt2;
 
@@ -126,12 +127,12 @@ int RingBuffer_Pop(RINGBUFF_T *RingBuff, void *data)
 	ptr += RB_INDT(RingBuff) * RingBuff->itemSz;
 	memcpy(data, ptr, RingBuff->itemSz);
 	RingBuff->tail++;
-
+ 
 	return 1;
 }
 
 /* Pop multiple items from Ring buffer */
-int RingBuffer_PopMult(RINGBUFF_T *RingBuff, void *data, int num)
+uint32_t RingBuffer_PopMult(RINGBUFF_T *RingBuff, void *data, int num)
 {
 	uint8_t *ptr = RingBuff->data;
 	int cnt1, cnt2;
