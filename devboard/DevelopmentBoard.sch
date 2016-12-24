@@ -74,5 +74,19 @@ S 7000 1100 1500 1600
 U 583147C9
 F0 "io" 60
 F1 "io.sch" 60
+F2 "PRGM" I L 7000 1350 60 
+F3 "RST" O L 7000 1250 60 
 $EndSheet
+Wire Wire Line
+	5750 1250 7000 1250
+Wire Wire Line
+	5750 1350 7000 1350
+Text HLabel 7000 1550 2    60   Input ~ 0
+CAN_RXD
+Wire Wire Line
+	5750 1550 7000 1550
+Text HLabel 7000 1650 2    60   Input ~ 0
+CAN_TXD
+Wire Wire Line
+	5750 1650 7000 1650
 $EndSCHEMATC
