@@ -1,7 +1,8 @@
 #include "chip.h"
-#include "config.h"
 #include "ltc6804.h"
 #include <string.h>
+
+#define SPI_BUFFER_SIZE 12
 
 static uint8_t CFG[6];
 static uint32_t _last_message = 2000;
@@ -51,6 +52,7 @@ void LTC6804_LoadCFG(uint32_t msTicks) {
 	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 12);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
+
 void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks) {
 
 	_baud = baud;

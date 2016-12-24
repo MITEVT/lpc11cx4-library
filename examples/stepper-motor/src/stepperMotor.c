@@ -75,15 +75,19 @@ STEPPER_STATE_T Stepper_Spin(STEPPER_MOTOR_T *mot, int32_t steps, volatile uint3
 STEPPER_STATE_T Stepper_Step(STEPPER_MOTOR_T *mot, volatile uint32_t msTicks){
 	if (mot->new_pos != mot->pos){
 		if (msTicks - mot->ticks >= mot->step_delay){
+			
 			mot->ticks = msTicks;
 			if (mot->new_pos > mot->pos){
 				mot->step_num++;
 				mot->pos++;
-				Stepper_StepCases(mot, ((mot->step_num < 0) ? mot->step_num * -1 : mot->step_num) % 4);	
+				Stepper_StepCases(mot, mot->step_num % 4);	
 			} else {
 				mot->step_num--;
+				if (mot->step_num < 0){
+					mot->step_num += 4;
+				}
 				mot->pos--;
-				Stepper_StepCases(mot, ((mot->step_num < 0) ? mot->step_num * -1 : mot->step_num) % 4);	
+				Stepper_StepCases(mot, mot->step_num  % 4);	
 			}
 			if (mot->zeroing) {
 				if (mot->pos <= mot->new_pos){
