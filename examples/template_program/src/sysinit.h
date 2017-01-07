@@ -45,7 +45,7 @@ uint32_t msTickCount;
  * @brief  Setup the microcontroller system.
  *         Initialize the System and update the SystemCoreClock variable.
  */
-extern void SystemInit (void);
+void SystemInit (void);
 
 
 

@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include "chip.h"
+#include "sysinit.h"
 
 /*
 //-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
@@ -288,8 +289,8 @@
 /*----------------------------------------------------------------------------
   Clock Variable definitions
  *----------------------------------------------------------------------------*/
-uint32_t SystemCoreClock;/*!< System Clock Frequency (Core Clock)*/
-uint32_t msTickCount;
+// uint32_t SystemCoreClock; !< System Clock Frequency (Core Clock)
+// uint32_t msTickCount;
 
 
 /*----------------------------------------------------------------------------
@@ -306,22 +307,22 @@ uint32_t msTickCount;
  *         Initialize the System.
  */
 void SystemInit (void) {
+#if (CLOCK_SETUP)                                 /* Clock Setup              */
   SystemCoreClock = __SYSTEM_CLOCK;
   msTickCount = __SYSTEM_CLOCK/1000;
-#if (CLOCK_SETUP)                                 /* Clock Setup              */
 #if (SYSCLK_SETUP)                                /* System Clock Setup       */
 #if (SYSOSC_SETUP)                                /* System Oscillator Setup  */
-uint32_t i;
+  uint32_t i;
 
   LPC_SYSCTL->PDRUNCFG     &= ~(1 << 5);          /* Power-up System Osc      */
   LPC_SYSCTL->SYSOSCCTRL    = SYSOSCCTRL_Val;
   for (i = 0; i < 200; i++) __NOP();
 #endif
   LPC_SYSCTL->SYSPLLCLKSEL  = SYSPLLCLKSEL_Val;   /* Select PLL Input         */
-  LPC_SYSCTL->SYSPLLCLKUEN  = 0x1;               /* Update Clock Source      */
-  LPC_SYSCTL->SYSPLLCLKUEN  = 0x0;               /* Toggle Update Register   */
+  LPC_SYSCTL->SYSPLLCLKUEN  = 0x1;                /* Update Clock Source      */
+  LPC_SYSCTL->SYSPLLCLKUEN  = 0x0;                /* Toggle Update Register   */
   LPC_SYSCTL->SYSPLLCLKUEN  = 0x1;
-  while (!(LPC_SYSCTL->SYSPLLCLKUEN & 0x1));     /* Wait Until Updated       */
+  while (!(LPC_SYSCTL->SYSPLLCLKUEN & 0x1));      /* Wait Until Updated       */
 #if (SYSPLL_SETUP)                                /* System PLL Setup         */
   LPC_SYSCTL->SYSPLLCTRL    = SYSPLLCTRL_Val;
   LPC_SYSCTL->PDRUNCFG     &= ~(1 << 7);          /* Power-up SYSPLL          */
@@ -333,16 +334,16 @@ uint32_t i;
   LPC_SYSCTL->PDRUNCFG     &= ~(1 << 6);          /* Power-up WDT Clock       */
 #endif
   LPC_SYSCTL->MAINCLKSEL    = MAINCLKSEL_Val;     /* Select PLL Clock Output  */
-  LPC_SYSCTL->MAINCLKUEN    = 0x0;               /* Toggle Update Register   */
+  LPC_SYSCTL->MAINCLKUEN    = 0x0;                /* Toggle Update Register   */
   LPC_SYSCTL->MAINCLKUEN    = 0x1;
-  while (!(LPC_SYSCTL->MAINCLKUEN & 0x1));       /* Wait Until Updated       */
+  while (!(LPC_SYSCTL->MAINCLKUEN & 0x1));        /* Wait Until Updated       */
 #endif
 
   LPC_SYSCTL->SYSAHBCLKDIV  = SYSAHBCLKDIV_Val;
   LPC_SYSCTL->SYSAHBCLKCTRL = AHBCLKCTRL_Val;
 #endif
 
-#if (MEMMAP_SETUP || MEMMAP_INIT)       /* Memory Mapping Setup               */
+#if (MEMMAP_SETUP || MEMMAP_INIT)                  /* Memory Mapping Setup               */
   LPC_SYSCTL->SYSMEMREMAP = SYSMEMREMAP_Val;
 #endif
 }

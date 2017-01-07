@@ -88,5 +88,10 @@ int main(void)
 		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
 				DEBUG_Write(uart_rx_buf, count);
 		}
+
+		if (msTicks - last_count > 1000) {
+			last_count = msTicks;
+			DEBUG_Print("PING\r\n");
+		}
 	}
 }
