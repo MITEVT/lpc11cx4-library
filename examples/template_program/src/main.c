@@ -1,6 +1,5 @@
-
-
 #include "chip.h"
+#include "sysinit.h"
 #include <string.h>
 
 const uint32_t OscRateIn = 0;
@@ -19,8 +18,6 @@ const uint32_t OscRateIn = 0;
 volatile uint32_t msTicks;
 
 static char uart_rx_buf[UART_RX_BUFFER_SIZE];
-
-#define DEBUG_ENABLE
 
 #ifdef DEBUG_ENABLE
 	#define DEBUG_Print(str) Chip_UART_SendBlocking(LPC_USART, str, strlen(str))
@@ -52,12 +49,10 @@ static void LED_Write(uint8_t port, uint8_t pin, uint8_t val) {
 int main(void)
 {
 
-	SystemCoreClockUpdate();
+	// SystemCoreClockUpdate();
 
-	if (SysTick_Config (SystemCoreClock / 1000)) {
-		//Error
-		while(1);
-	}
+	// SysTick_Config (SystemCoreClock / 1000);
+	SysTick_Config (msTickCount);
 
 	LPC_SYSCTL->CLKOUTSEL = 0x03; 		// Main CLK (Core CLK) Out
 	LPC_SYSCTL->CLKOUTUEN = 0x00; 		// Toggle Update CLKOUT Source
@@ -73,7 +68,7 @@ int main(void)
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_7, (IOCON_FUNC1 | IOCON_MODE_INACT));/* TXD */
 
 	Chip_UART_Init(LPC_USART);
-	Chip_UART_SetBaud(LPC_USART, UART_BAUD_RATE);
+	Chip_UART_SetBaud(LPC_USART, UART_BAUD);
 	Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT | UART_LCR_PARITY_DIS));
 	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
 	Chip_UART_TXEnable(LPC_USART);
@@ -85,6 +80,8 @@ int main(void)
 	LED_Init(LED1);
 
 	LED_Write(LED0, true);
+
+	uint32_t last_count = msTicks;
 
 	while (1) {
 		uint8_t count;
