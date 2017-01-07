@@ -48,11 +48,7 @@ static void LED_Write(uint8_t port, uint8_t pin, uint8_t val) {
 
 int main(void)
 {
-
-	// SystemCoreClockUpdate();
-
-	// SysTick_Config (SystemCoreClock / 1000);
-	SysTick_Config (msTickCount);
+	SysTick_Config (TicksPerMS);
 
 	LPC_SYSCTL->CLKOUTSEL = 0x03; 		// Main CLK (Core CLK) Out
 	LPC_SYSCTL->CLKOUTUEN = 0x00; 		// Toggle Update CLKOUT Source

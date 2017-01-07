@@ -33,7 +33,7 @@ extern "C" {
 #include <stdint.h>
 
 uint32_t SystemCoreClock;     /*!< System Clock Frequency (Core Clock)  */
-uint32_t msTickCount;
+uint32_t TicksPerMS;
 
 
 /**

@@ -120,7 +120,7 @@
 #define WDTOSCCTRL_Val        0xA0
 #define SYSPLLCLKSEL_Val      0x0
 #define SYSPLL_SETUP          1
-#define SYSPLLCTRL_Val        0x41
+#define SYSPLLCTRL_Val        0x23
 #define MAINCLKSEL_Val        0x3
 #define SYSAHBCLKDIV_Val      0x1
 #define AHBCLKCTRL_Val        0x1005F
@@ -309,7 +309,7 @@
 void SystemInit (void) {
 #if (CLOCK_SETUP)                                 /* Clock Setup              */
   SystemCoreClock = __SYSTEM_CLOCK;
-  msTickCount = __SYSTEM_CLOCK/1000;
+  TicksPerMS = __SYSTEM_CLOCK/1000;
 #if (SYSCLK_SETUP)                                /* System Clock Setup       */
 #if (SYSOSC_SETUP)                                /* System Oscillator Setup  */
   uint32_t i;
