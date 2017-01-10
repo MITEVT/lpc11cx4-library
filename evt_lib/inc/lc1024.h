@@ -1,5 +1,5 @@
 #ifndef _LC1024_H_
-#define _LTC6804_H_
+#define _LC1024_H_
 
 #define RD_STATUS_REG_INSTR 0x5
 #define WRITE_DISABLE_INSTR 0x4

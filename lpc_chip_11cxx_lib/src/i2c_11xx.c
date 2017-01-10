@@ -75,11 +75,13 @@ static struct i2c_slave_interface i2c_slave[I2C_NUM_INTERFACE][I2C_SLAVE_NUM_INT
  
 STATIC INLINE void enableClk(I2C_ID_T id)
 {
+	UNUSED(id);
 	Chip_Clock_EnablePeriphClock(i2c.clk);
 }
 
 STATIC INLINE void disableClk(I2C_ID_T id)
 {
+	UNUSED(id);
 	Chip_Clock_DisablePeriphClock(i2c.clk);
 }
 
@@ -327,6 +329,7 @@ int handleSlaveXferState(LPC_I2C_T *pI2C, I2C_XFER_T *xfer)
 /* Chip event handler interrupt based */
 void Chip_I2C_EventHandler(I2C_ID_T id, I2C_EVENT_T event)
 {
+	UNUSED(id);
 	struct i2c_interface *iic = &i2c;
 	volatile I2C_STATUS_T *stat;
 
@@ -392,6 +395,7 @@ void Chip_I2C_DeInit(I2C_ID_T id)
 /* Set up clock rate for LPC_I2C peripheral */
 void Chip_I2C_SetClockRate(I2C_ID_T id, uint32_t clockrate)
 {
+	UNUSED(id);
 	uint32_t SCLValue;
 
 	SCLValue = (getClkRate() / clockrate);
@@ -402,12 +406,14 @@ void Chip_I2C_SetClockRate(I2C_ID_T id, uint32_t clockrate)
 /* Get current clock rate for LPC_I2C peripheral */
 uint32_t Chip_I2C_GetClockRate(I2C_ID_T id)
 {
+	UNUSED(id);
 	return getClkRate() / (LPC_I2Cx(id)->SCLH + LPC_I2Cx(id)->SCLL);
 }
 
 /* Set the master event handler */
 int Chip_I2C_SetMasterEventHandler(I2C_ID_T id, I2C_EVENTHANDLER_T event)
 {
+	UNUSED(id);
 	struct i2c_interface *iic = &i2c; 
 	if (!iic->mXfer) {
 		iic->mEvent = event;
@@ -418,6 +424,7 @@ int Chip_I2C_SetMasterEventHandler(I2C_ID_T id, I2C_EVENTHANDLER_T event)
 /* Get the master event handler */
 I2C_EVENTHANDLER_T Chip_I2C_GetMasterEventHandler(I2C_ID_T id)
 {
+	UNUSED(id);
 	return i2c.mEvent;
 }
 
@@ -478,6 +485,7 @@ int Chip_I2C_MasterCmdRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t cmd, uint8_t 
 /* Sequential master read */
 int Chip_I2C_MasterRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t *buff, int len)
 {
+	UNUSED(id);
 	I2C_XFER_T xfer;
 	xfer.slaveAddr = slaveAddr;
 	xfer.rxBuff = buff;
@@ -490,6 +498,7 @@ int Chip_I2C_MasterRead(I2C_ID_T id, uint8_t slaveAddr, uint8_t *buff, int len)
 /* Check if master state is active */
 int Chip_I2C_IsMasterActive(I2C_ID_T id)
 {
+	UNUSED(id);
 	return isMasterState(i2c.ip);
 }
 
@@ -553,12 +562,14 @@ void Chip_I2C_SlaveStateHandler(I2C_ID_T id)
 /* Disable I2C device */
 void Chip_I2C_Disable(I2C_ID_T id)
 {
+	UNUSED(id);
 	LPC_I2Cx(id)->CONCLR = I2C_I2CONCLR_I2ENC;
 }
 
 /* State change checking */
 int Chip_I2C_IsStateChanged(I2C_ID_T id)
 {
+	UNUSED(id);
 	return (LPC_I2Cx(id)->CONSET & I2C_CON_SI) != 0;
 }
 
