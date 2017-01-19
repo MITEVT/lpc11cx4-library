@@ -8,7 +8,7 @@
 #define WRITE_ENABLE_INSTR 0x6
 
 // USES LPC_SSP1
-void LC1024_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin);
+void LC1024_Init(LPC_SSP_T *pSSP, uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin);
 
 // address can be array of atmost at most size 3 (uses only first three bytes)
 void LC1024_ReadStatusReg(uint8_t* data);
