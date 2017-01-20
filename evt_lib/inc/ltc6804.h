@@ -70,7 +70,7 @@ typedef enum CELL_GROUP {
 } CELL_GROUPS_T;
 
 
-void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks);
+void LTC6804_Init(LPC_SSP_T *pSSP, uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks);
 void LTC6804_ReadCFG(uint8_t *data, uint32_t msTicks);
 void LTC6804_ReadVoltageGroup(uint8_t *rx_buf, CELL_INFO_T *readings, CELL_GROUPS_T cg, uint32_t msTicks);
 void LTC6804_StartADC(uint32_t msTicks);

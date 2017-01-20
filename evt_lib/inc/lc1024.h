@@ -1,6 +1,8 @@
 #ifndef _LC1024_H_
 #define _LC1024_H_
 
+#include "chip.h"
+
 #define RD_STATUS_REG_INSTR 0x5
 #define WRITE_DISABLE_INSTR 0x4
 #define READ_MEM_INSTR 0x3

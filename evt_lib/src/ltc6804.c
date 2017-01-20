@@ -10,9 +10,10 @@ static uint8_t _wake_length = 0;
 
 static uint8_t Tx_Buf[SPI_BUFFER_SIZE];
 static Chip_SSP_DATA_SETUP_T xf_setup;
-uint8_t _cs_gpio;
-uint8_t _cs_pin;
-uint32_t _baud;
+static uint8_t _cs_gpio;
+static uint8_t _cs_pin;
+static uint32_t _baud;
+static LPC_SSP_T *_pSSP;
 
 uint16_t LTC6804_CalculatePEC(uint8_t *data, uint8_t len);
 
@@ -30,7 +31,7 @@ void LTC6804_Wake(uint32_t msTicks) {
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, _wake_length);
+	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, _wake_length);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
@@ -49,12 +50,12 @@ void LTC6804_LoadCFG(uint32_t msTicks) {
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 12);
+	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 12);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
-void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks) {
-
+void LTC6804_Init(LPC_SSP_T *pSSP, uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTicks) {
+	_pSSP = pSSP;
 	_baud = baud;
 	_cs_gpio = cs_gpio;
 	_cs_pin = cs_pin;
@@ -68,11 +69,11 @@ void LTC6804_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin, uint32_t msTic
 	Chip_GPIO_WriteDirBit(LPC_GPIO, _cs_gpio, _cs_pin, true);							/* Chip Select */
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 
-	Chip_SSP_Init(LPC_SSP1);
-	Chip_SSP_SetBitRate(LPC_SSP1, _baud);
-	Chip_SSP_SetFormat(LPC_SSP1, SSP_BITS_8, SSP_FRAMEFORMAT_SPI, SSP_CLOCK_MODE3);
-	Chip_SSP_SetMaster(LPC_SSP1, true);
-	Chip_SSP_Enable(LPC_SSP1);
+	Chip_SSP_Init(_pSSP);
+	Chip_SSP_SetBitRate(_pSSP, _baud);
+	Chip_SSP_SetFormat(_pSSP, SSP_BITS_8, SSP_FRAMEFORMAT_SPI, SSP_CLOCK_MODE3);
+	Chip_SSP_SetMaster(_pSSP, true);
+	Chip_SSP_Enable(_pSSP);
 
 	xf_setup.tx_data = Tx_Buf;
 
@@ -102,7 +103,7 @@ void LTC6804_StartADC(uint32_t msTicks) {
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 4);
+	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 4);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
@@ -117,7 +118,7 @@ void LTC6804_CVSelfTestCmd(uint32_t msTicks) {
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 4);
+	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 4);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
@@ -136,7 +137,7 @@ void LTC6804_OpenWireTestCmd(uint8_t pup_bit, uint32_t msTicks) {
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_WriteFrames_Blocking(LPC_SSP1, Tx_Buf, 4);
+	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 4);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
@@ -164,7 +165,7 @@ void LTC6804_ReadCFG(uint8_t *data, uint32_t msTicks) {
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_RWFrames_Blocking(LPC_SSP1, &xf_setup);
+	Chip_SSP_RWFrames_Blocking(_pSSP, &xf_setup);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 }
 
@@ -195,7 +196,7 @@ void LTC6804_ReadVoltageGroup(uint8_t *rx_buf, CELL_INFO_T *readings, CELL_GROUP
 
 	_last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-	Chip_SSP_RWFrames_Blocking(LPC_SSP1, &xf_setup);
+	Chip_SSP_RWFrames_Blocking(_pSSP, &xf_setup);
 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
 
     if(cg == CELL_GROUP_A) {
