@@ -1,13 +1,14 @@
 #ifndef _LTC6804_H_
 #define _LTC6804_H_
 
-#include "lpc_types.h"
+#include "chip.h"
+#include <string.h>
 
 /* =================== COMMAND CODES ================== */
 
 #define WRCFG 0x001
 #define RDCFG 0x002
-// [TODO] Precalculate Command PECs
+// [TODO] precalculate Command PECs
 
 #define RDCVA 0x004
 #define RDCVB 0x006
@@ -39,24 +40,6 @@
 #define ADC_CHN_5_11 0x5
 #define ADC_CHN_6_12 0x6
 
-typedef enum {
-	LTC6804_ADC_MODE_FAST = 1, LTC6804_ADC_MODE_NORMAL = 2, LTC6804_ADC_MODE_SLOW = 3
-} LTC6804_ADC_MODE_T;
-
-static const uint8_t LTC6804_ADC_MODE_WAIT_TIMES[] = {
-	0,
-	2,
-	3,
-	202
-};
-
-static const uint16_t LTC6804_SELF_TEST_RES[] = {
-	0,
-	0x9565,
-	0x9555,
-	0x9555
-};
-
 #define PUP_DOWN 0x0
 #define PUP_UP 0x1
 
@@ -74,7 +57,22 @@ static const uint16_t LTC6804_SELF_TEST_RES[] = {
 #define ST_TWO_26HZ_RES 0x6AAA
 
 #define NUM_CELL_GROUPS 4
-/* =================== FUNCTION PROTOS ================== */
+
+/***************************************
+		Public Types
+****************************************/
+
+typedef enum {
+	LTC6804_ADC_MODE_FAST = 1, LTC6804_ADC_MODE_NORMAL = 2, LTC6804_ADC_MODE_SLOW = 3
+} LTC6804_ADC_MODE_T;
+
+static const uint8_t LTC6804_ADC_MODE_WAIT_TIMES[] = {
+	0, 2, 3, 202
+};
+
+static const uint16_t LTC6804_SELF_TEST_RES[] = {
+	0, 0x9565, 0x9555, 0x9555
+};
 
 typedef struct {
 	LPC_SSP_T *pSSP;
@@ -114,16 +112,10 @@ typedef struct {
 	uint32_t pack_cell_min_mV;
 } LTC6804_ADC_RES_T;
 
-// typedef struct CELL_INFO {
-//     uint16_t groupA[3];
-//     uint16_t groupB[3];
-//     uint16_t groupC[3];
-//     uint16_t groupD[3];
-// } CELL_INFO_T;
 
-// typedef enum CELL_GROUP {
-//     CELL_GROUP_A, CELL_GROUP_B, CELL_GROUP_C, CELL_GROUP_D
-// } CELL_GROUPS_T;
+/***************************************
+	Public Function Prototypes
+****************************************/
 
 LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
@@ -131,7 +123,6 @@ bool LTC6804_VerifyCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_
 LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_SetBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks);
-// void LTC6804_ReadVoltageGroup(uint8_t *rx_buf, CELL_INFO_T *readings, CELL_GROUPS_T cg, uint32_t msTicks);
-// void LTC6804_StartADC(uint32_t msTicks);
+LTC6804_STATUS_T LTC6804_ClearCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 #endif

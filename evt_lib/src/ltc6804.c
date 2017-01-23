@@ -1,19 +1,29 @@
-#include "chip.h"
 #include "ltc6804.h"
-#include <string.h>
 
-static uint8_t wake_buf[15];
+/***************************************
+		Private Variables
+****************************************/
 
-// Function Prototypes
+static uint8_t wake_buf[40];
+
+/***************************************
+		Private Function Prototypes
+****************************************/
+
 uint16_t _calculate_pec(uint8_t *data, uint8_t len);
-LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force);
 bool _check_st_results(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 LTC6804_STATUS_T _command(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
 LTC6804_STATUS_T _write(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
 LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
 
+
+/***************************************
+		Public Functions
+****************************************/
+
 LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, config->cs_gpio, config->cs_pin, true);							/* Chip Select */
+	Chip_GPIO_WriteDirBit(LPC_GPIO, config->cs_gpio, config->cs_pin, true);
 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, true);
 
 	Chip_SSP_Init(config->pSSP);
@@ -26,49 +36,20 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	uint16_t VOV = config->max_cell_mV * 10 / 16;
 
 	state->xf->rx_data = state->rx_buf;
-	state->cfg[0] = 0xFC; 
+	state->cfg[0] = 0xBC; 
 	state->cfg[1] = VUV & 0xFF;
 	state->cfg[2] = (VUV & 0xF00) >> 8 | (VOV & 0xF) << 4; 
 	state->cfg[3] = (VOV & 0xFF0) >> 4;
 	state->cfg[4] = 0x00; 
-	state->cfg[5] = 0x00;
+	state->cfg[5] = 0x00; // [TODO] Consider using DCTO
 
 	state->last_message = 2000;
-	state->wake_length = config->baud/80000; // [TODO] Remember how this was calculated
+	state->wake_length = 3*config->baud/80000 + 1; // [TODO] Remember how this was calculated
 
 	state->wait_time = LTC6804_ADC_MODE_WAIT_TIMES[config->adc_mode];
 
 	return LTC6804_WriteCFG(config, state, msTicks);
 }
-
-// LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
-// 	LTC6804_STATUS_T res;
-// 	if ((res = _wake(config, state, msTicks)) != LTC6804_PASS) {
-// 		return res;
-// 	}
-
-// 	state->tx_buf[0] = WRCFG >> 8;
-// 	state->tx_buf[1] = WRCFG & 0xFF;
-// 	uint16_t pec = _calculate_pec(state->tx_buf, 2);
-// 	state->tx_buf[2] = pec >> 8;
-// 	state->tx_buf[3] = pec & 0xFF;
-// 	memcpy(state->tx_buf+4, state->cfg, 6);
-// 	pec = _calculate_pec(state->tx_buf+4, 6);
-// 	state->tx_buf[10] = pec >> 8;
-// 	state->tx_buf[11] = pec & 0xFF;
-
-// 	int i;
-// 	for (i = 0; i < config->num_modules; i++) {
-// 		memcpy(state->tx_buf+4+8*i, state->tx_buf+4, 8);
-// 	}
-
-// 	state->last_message = msTicks;
-// 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, false);
-// 	Chip_SSP_WriteFrames_Blocking(config->pSSP, state->tx_buf, 4+8*config->num_modules);
-// 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, true);
-
-// 	return LTC6804_PASS;
-// }
 
 /* Clears Balance Bytes */
 LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
@@ -110,13 +91,14 @@ LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	} else {
 		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
 			state->waiting = false;
-			if (_read(config, state, RDCVA, msTicks) != LTC6804_PASS) return LTC6804_SPI_ERROR;
+			LTC6804_STATUS_T res;
+			if ((res = _read(config, state, RDCVA, msTicks)) != LTC6804_PASS) return res;
 			if (!_check_st_results(config, state, msTicks)) return LTC6804_FAIL;
-			if (_read(config, state, RDCVB, msTicks) != LTC6804_PASS) return LTC6804_SPI_ERROR;
+			if ((res = _read(config, state, RDCVB, msTicks)) != LTC6804_PASS) return res;
 			if (!_check_st_results(config, state, msTicks)) return LTC6804_FAIL;
-			if (_read(config, state, RDCVC, msTicks) != LTC6804_PASS) return LTC6804_SPI_ERROR;
+			if ((res = _read(config, state, RDCVC, msTicks)) != LTC6804_PASS) return res;
 			if (!_check_st_results(config, state, msTicks)) return LTC6804_FAIL;
-			if (_read(config, state, RDCVD, msTicks) != LTC6804_PASS) return LTC6804_SPI_ERROR;
+			if ((res = _read(config, state, RDCVD, msTicks)) != LTC6804_PASS) return res;
 			if (!_check_st_results(config, state, msTicks)) return LTC6804_FAIL;
 			return LTC6804_PASS;
 		} else { // Keep Waiting
@@ -145,7 +127,6 @@ LTC6804_STATUS_T LTC6804_SetBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STAT
 		tx_ptr[7] = pec & 0xFF;
 	}
 
-
 	return _write(config, state, WRCFG, msTicks);
 }
 
@@ -153,7 +134,7 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 	if (!state->waiting) { // Need to send out self test command
 		state->waiting = true;
 		state->flight_time = msTicks;
-		_command(config, state, (config->adc_mode << 7) | 0x260, msTicks); // ADCV, All Channels, DCP=0
+		_command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
 		return LTC6804_WAITING;
 	} else {
 		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough [TODO] add max,min
@@ -214,8 +195,15 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 	}
 }
 
+LTC6804_STATUS_T LTC6804_ClearCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+	return _command(config, state, CLRCELL, msTicks);
+}
+/***************************************
+		Private Functions
+****************************************/
+
 LTC6804_STATUS_T _command(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks) {
-	_wake(config, state, msTicks);
+	_wake(config, state, msTicks, false);
 
 	state->tx_buf[0] = cmd >> 8;
 	state->tx_buf[1] = cmd & 0xFF;
@@ -233,7 +221,7 @@ LTC6804_STATUS_T _command(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint
 }
 
 LTC6804_STATUS_T _write(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks) {
-	_wake(config, state, msTicks);
+	_wake(config, state, msTicks, false);
 
 	state->tx_buf[0] = cmd >> 8;
 	state->tx_buf[1] = cmd & 0xFF;
@@ -251,13 +239,15 @@ LTC6804_STATUS_T _write(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16
 }
 
 LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks) {
-	_wake(config, state, msTicks);
+	_wake(config, state, msTicks, false);
 
 	state->tx_buf[0] = cmd >> 8;
 	state->tx_buf[1] = cmd & 0xFF;
 	uint16_t pec = _calculate_pec(state->tx_buf, 2);
 	state->tx_buf[2] = pec >> 8;
 	state->tx_buf[3] = pec & 0xFF;
+
+	memset(state->tx_buf+4, 0, 8*config->num_modules);
 
 	state->xf->length = 4 + 8 * config->num_modules; state->xf->rx_cnt = 0; state->xf->tx_cnt = 0;
 	state->xf->rx_data = state->rx_buf;
@@ -281,38 +271,22 @@ LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_
 	return LTC6804_PASS;
 }
 
-// void LTC6804_OpenWireTestCmd(uint8_t pup_bit, uint32_t msTicks) {
-// 	Tx_Buf[0] = 0x03;
-//     if(pup_bit == 0) {
-// 	    Tx_Buf[1] = 0x28;
-//     } else {
-// 	    Tx_Buf[1] = 0x68;
-//     }
-// 	uint16_t pec = _calculate_pec(Tx_Buf, 2);
-// 	Tx_Buf[2] = pec >> 8;
-// 	Tx_Buf[3] = pec & 0xFF;
 
-// 	_wake(msTicks);
+LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force) {
+	if (msTicks - state->last_message < 4 && !force) return LTC6804_PASS;
 
-// 	_last_message = msTicks;
-// 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
-// 	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 4);
-// 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
-// }
+	uint8_t wake = (msTicks - state->last_message < 1500 && !force) ? 1 : state->wake_length;
 
-// void LTC6804_ReadVoltageGroup(uint8_t *rx_buf, CELL_INFO_T *readings, CELL_GROUPS_T cg, uint32_t msTicks) {
-
-LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
-	if (msTicks - state->last_message < 1500) return LTC6804_PASS;
+	// if (msTicks - state->last_message < 1500 && !force) return LTC6804_PASS;
 
 	uint8_t i;
-	for (i = 0; i < state->wake_length; i++) {
+	for (i = 0; i < wake; i++) {
 		wake_buf[i] = 0x00;
 	}
 
 	state->last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, false);
-	uint32_t res = Chip_SSP_WriteFrames_Blocking(config->pSSP, wake_buf, state->wake_length);
+	uint32_t res = Chip_SSP_WriteFrames_Blocking(config->pSSP, wake_buf, wake);
 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, true);
 
 	if (res == ERROR) return LTC6804_SPI_ERROR;
@@ -368,3 +342,22 @@ bool _check_st_results(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_
 
 	return true;
 }
+
+// void LTC6804_OpenWireTestCmd(uint8_t pup_bit, uint32_t msTicks) {
+// 	Tx_Buf[0] = 0x03;
+//     if(pup_bit == 0) {
+// 	    Tx_Buf[1] = 0x28;
+//     } else {
+// 	    Tx_Buf[1] = 0x68;
+//     }
+// 	uint16_t pec = _calculate_pec(Tx_Buf, 2);
+// 	Tx_Buf[2] = pec >> 8;
+// 	Tx_Buf[3] = pec & 0xFF;
+
+// 	_wake(msTicks);
+
+// 	_last_message = msTicks;
+// 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
+// 	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 4);
+// 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
+// }
