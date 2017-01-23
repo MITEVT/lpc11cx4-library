@@ -4,7 +4,8 @@
 		Private Variables
 ****************************************/
 
-static uint8_t wake_buf[40];
+#define WAKE_BUF_LEN 40
+static uint8_t wake_buf[WAKE_BUF_LEN];
 
 /***************************************
 		Private Function Prototypes
@@ -45,8 +46,10 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 
 	state->last_message = 2000;
 	state->wake_length = 3*config->baud/80000 + 1; // [TODO] Remember how this was calculated
-
+	state->waiting = false;
 	state->wait_time = LTC6804_ADC_MODE_WAIT_TIMES[config->adc_mode];
+
+	memset(wake_buf, 0, WAKE_BUF_LEN);
 
 	return LTC6804_WriteCFG(config, state, msTicks);
 }
@@ -273,16 +276,17 @@ LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_
 
 
 LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force) {
-	if (msTicks - state->last_message < 4 && !force) return LTC6804_PASS;
+	// if (msTicks - state->last_message < 4 && !force) return LTC6804_PASS;
 
-	uint8_t wake = (msTicks - state->last_message < 1500 && !force) ? 1 : state->wake_length;
+	// uint32_t wake = (msTicks - state->last_message < 1500 && !force) ? 2 : state->wake_length;
+	uint32_t wake = state->wake_length;
+	// uint8_t i;
+	// for (i = 0; i < wake; i++) {
+	// 	wake_buf[i] = 0x00;
+	// }
 
-	// if (msTicks - state->last_message < 1500 && !force) return LTC6804_PASS;
-
-	uint8_t i;
-	for (i = 0; i < wake; i++) {
-		wake_buf[i] = 0x00;
-	}
+	// [TODO] If you fall asleep, write configuration again pls
+ 	// [TODO] Wait tREFUP if going to do ADC crap. ADC must wait until 4 ms after last wake
 
 	state->last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, false);

@@ -94,7 +94,7 @@ typedef struct {
 	uint8_t *tx_buf;
 	uint8_t *rx_buf;
 	uint32_t last_message;
-	uint8_t wake_length;
+	uint32_t wake_length;
 	uint8_t *cfg;
 
 	bool waiting;
