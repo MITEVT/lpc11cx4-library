@@ -7,6 +7,10 @@
 #define WAKE_BUF_LEN 40
 static uint8_t wake_buf[WAKE_BUF_LEN];
 
+#define _IS_ASLEEP(state, msTicks) (msTicks - state->last_message > T_SLEEP)
+#define _IS_IDLE(state, msTicks) (msTicks - state->last_message > T_IDLE)
+#define _IS_REFUP(state, msTicks) (msTicks - state->last_sleep_wake > T_REFUP)
+
 /***************************************
 		Private Function Prototypes
 ****************************************/
@@ -44,18 +48,23 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	state->cfg[4] = 0x00; 
 	state->cfg[5] = 0x00; // [TODO] Consider using DCTO
 
-	state->last_message = 2000;
+	state->last_message = msTicks;
 	state->wake_length = 3*config->baud/80000 + 1; // [TODO] Remember how this was calculated
 	state->waiting = false;
 	state->wait_time = LTC6804_ADC_MODE_WAIT_TIMES[config->adc_mode];
+	state->last_sleep_wake = msTicks;
 
 	memset(wake_buf, 0, WAKE_BUF_LEN);
+
+	_wake(config, state, msTicks, true);
 
 	return LTC6804_WriteCFG(config, state, msTicks);
 }
 
 /* Clears Balance Bytes */
 LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+	Chip_UART_SendBlocking(LPC_USART, "^", 1);
+
 	memcpy(state->tx_buf+4, state->cfg, 6);
 	uint16_t pec = _calculate_pec(state->tx_buf+4, 6);
 	state->tx_buf[10] = pec >> 8;
@@ -86,6 +95,13 @@ bool LTC6804_VerifyCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_
 }
 
 LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+	if (_IS_ASLEEP(state, msTicks)) {
+		_wake(config, state, msTicks, false);
+		return LTC6804_WAITING;
+	} else if (!_IS_REFUP(state, msTicks)) {
+		return LTC6804_WAITING_REFUP;
+	}
+
 	if (!state->waiting) { // Need to send out self test command
 		state->waiting = true;
 		state->flight_time = msTicks;
@@ -134,17 +150,25 @@ LTC6804_STATUS_T LTC6804_SetBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STAT
 }
 
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks) {
+	if (_IS_ASLEEP(state, msTicks)) {
+		_wake(config, state, msTicks, false);
+		return LTC6804_WAITING;
+	} else if (!_IS_REFUP(state, msTicks)) {
+		return LTC6804_WAITING_REFUP;
+	}
+
 	if (!state->waiting) { // Need to send out self test command
 		state->waiting = true;
 		state->flight_time = msTicks;
 		_command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
 		return LTC6804_WAITING;
 	} else {
-		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough [TODO] add max,min
+		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
 			state->waiting = false;
 			int i, j;
 			uint32_t *vol_ptr = res->cell_voltages_mV;
-
+			uint32_t min = UINT32_MAX;
+			uint32_t max = 0;
 			// Read a cell voltage group
 				// For each module, calculate head of module voltage group
 				// vol_ptr is pointer to head of module cell group voltages
@@ -155,6 +179,8 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j < config->module_cell_count[i] && j < 3; j++) {
 					vol_ptr[j] = (rx_ptr[2*j + 1] << 8 | rx_ptr[2*j]) / 10;
+					max = (vol_ptr[j] > max) ? vol_ptr[j] : max;
+					min = (vol_ptr[j] < min) ? vol_ptr[j] : min;
 				}
 				vol_ptr = vol_ptr + config->module_cell_count[i];
 			}
@@ -166,6 +192,8 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j + 3 < config->module_cell_count[i] && j < 3; j++) {
 					vol_ptr[j + 3] = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2* j]) / 10;
+					max = (vol_ptr[j + 3] > max) ? vol_ptr[j + 3] : max;
+					min = (vol_ptr[j + 3] < min) ? vol_ptr[j + 3] : min;
 				} 
 				vol_ptr = vol_ptr + config->module_cell_count[i];
 			}
@@ -177,6 +205,8 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j + 6 < config->module_cell_count[i] && j < 3; j++) {
 					vol_ptr[j + 6] = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]) / 10;
+					max = (vol_ptr[j + 6] > max) ? vol_ptr[j + 6] : max;
+					min = (vol_ptr[j + 6] < min) ? vol_ptr[j + 6] : min;
 				} 
 				vol_ptr = vol_ptr + config->module_cell_count[i];
 			}
@@ -188,9 +218,14 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j + 9 < config->module_cell_count[i] && j < 3; j++) {
 					vol_ptr[j + 9] = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]) / 10;
+					max = (vol_ptr[j + 9] > max) ? vol_ptr[j + 9] : max;
+					min = (vol_ptr[j + 9] < min) ? vol_ptr[j + 9] : min;
 				} 
 				vol_ptr = vol_ptr + config->module_cell_count[i];
 			}
+
+			res->pack_cell_max_mV = max;
+			res->pack_cell_min_mV = min;
 			return LTC6804_PASS;
 		} else { // Keep Waiting
 			return LTC6804_WAITING;
@@ -274,24 +309,28 @@ LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_
 	return LTC6804_PASS;
 }
 
-
+// [NOTE] If timing is fucked look here
 LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force) {
 	// if (msTicks - state->last_message < 4 && !force) return LTC6804_PASS;
 
-	// uint32_t wake = (msTicks - state->last_message < 1500 && !force) ? 2 : state->wake_length;
-	uint32_t wake = state->wake_length;
-	// uint8_t i;
-	// for (i = 0; i < wake; i++) {
-	// 	wake_buf[i] = 0x00;
-	// }
+	if (msTicks - state->last_message < T_IDLE && !force) return LTC6804_PASS;
 
-	// [TODO] If you fall asleep, write configuration again pls
- 	// [TODO] Wait tREFUP if going to do ADC crap. ADC must wait until 4 ms after last wake
 
+	uint32_t wake;
+	bool waking = msTicks - state->last_message >= T_SLEEP;
+
+	wake = (waking || force) ? state->wake_length : 2;
+	state->last_sleep_wake = (waking) ? msTicks : state->last_sleep_wake;
+
+
+	// [TODO] Consider moving to _write or _command or _generic_write
 	state->last_message = msTicks;
 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, false);
 	uint32_t res = Chip_SSP_WriteFrames_Blocking(config->pSSP, wake_buf, wake);
 	Chip_GPIO_SetPinState(LPC_GPIO, config->cs_gpio, config->cs_pin, true);
+
+	// If you fall asleep, write configuration again pls
+	if (waking) LTC6804_WriteCFG(config, state, msTicks); // Wake will be skipped bc last_message updated
 
 	if (res == ERROR) return LTC6804_SPI_ERROR;
 	return LTC6804_PASS;

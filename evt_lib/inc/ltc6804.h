@@ -3,6 +3,14 @@
 
 #include "chip.h"
 #include <string.h>
+#include <stdint.h>
+
+/* =================== TIMING MACROS ================== */
+
+#define T_REFUP 5
+#define T_SLEEP 1800
+#define T_IDLE 4
+#define T_WAKE 1
 
 /* =================== COMMAND CODES ================== */
 
@@ -100,10 +108,11 @@ typedef struct {
 	bool waiting;
 	uint32_t wait_time;
 	uint32_t flight_time;
+	uint32_t last_sleep_wake;
 } LTC6804_STATE_T;
 
 typedef enum {
-	LTC6804_WAITING, LTC6804_PASS, LTC6804_FAIL, LTC6804_SPI_ERROR, LTC6804_PEC_ERROR
+	LTC6804_WAITING, LTC6804_PASS, LTC6804_FAIL, LTC6804_SPI_ERROR, LTC6804_PEC_ERROR, LTC6804_WAITING_REFUP
 } LTC6804_STATUS_T;
 
 typedef struct {
