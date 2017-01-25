@@ -63,8 +63,6 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 
 /* Clears Balance Bytes */
 LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
-	Chip_UART_SendBlocking(LPC_USART, "^", 1);
-
 	memcpy(state->tx_buf+4, state->cfg, 6);
 	uint16_t pec = _calculate_pec(state->tx_buf+4, 6);
 	state->tx_buf[10] = pec >> 8;
