@@ -92,6 +92,10 @@ int main(void)
 
 		CAN_error_ID = CAN_Receive(&rx_buffer);
 		Print_Buffer(rx_buffer.data, rx_buffer.dlc);
+		if(CAN_error_ID != 0){
+		    itoa(CAN_error_ID, str, 2);
+		    DEBUG_Print(str);
+		}
 		uint8_t count;
 		uint8_t data[1];
 
