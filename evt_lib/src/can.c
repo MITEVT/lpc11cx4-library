@@ -100,7 +100,8 @@ void CAN_Init(uint32_t baud_rate) {
 	/* Configure message object 1 to only ID 0x600 */
 	msg_obj.msgobj = 1;
 	msg_obj.mode_id = 0x600;
-	msg_obj.mask = 0xFFF;
+    // ANDs the mask with the input ID and checks if == to mode_id
+	msg_obj.mask = 0x000; 
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 
 	can_error_flag = false;
