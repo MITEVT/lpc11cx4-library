@@ -434,7 +434,7 @@ void SystemInit (void)
 #if (SYSPLL_SETUP)                                /* System PLL Setup         */
   LPC_SYSCTL->SYSPLLCTRL    = SYSPLLCTRL_Val;
   LPC_SYSCTL->PDRUNCFG     &= ~(1 << 7);          /* Power-up SYSPLL          */
-  while (!(LPC_SYSCTL->SYSPLLSTAT & 0x1));	      /* Wait Until PLL Locked    */
+  while (!(LPC_SYSCTL->SYSPLLSTAT & 0x1));        /* Wait Until PLL Locked    */
 #endif
 #endif
 #if (WDTOSC_SETUP)                                /* Watchdog Oscillator Setup*/
