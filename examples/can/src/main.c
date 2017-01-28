@@ -4,6 +4,7 @@
 #include "util.h"
 #include <string.h>
 #include "can.h"
+#include <stdlib.h>
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -22,7 +23,6 @@ const uint32_t OscRateIn = 12000000;
 volatile uint32_t msTicks;
 
 CCAN_MSG_OBJ_T rx_buffer;
-uint32_t can_error_id;
 static char str[100];
 static char uart_rx_buf[UART_RX_BUFFER_SIZE];
 
@@ -71,10 +71,13 @@ int main(void)
 	DEBUG_Print("Started up\n\r");
 
 	CAN_Init(TEST_CCAN_BAUD_RATE);
+	uint32_t CAN_error_ID;
 
 	while (1) {
 
-		CAN_Receive(&rx_buffer);
+		CAN_error_ID = CAN_Receive(&rx_buffer);
+		itoa(CAN_error_ID, str, 2);
+		DEBUG_Print(str);
 		
 		uint8_t count;
 		uint8_t data[1];
@@ -83,7 +86,9 @@ int main(void)
 				case 'a':
 					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
 					data[0] = 0xAA;
-					CAN_Transmit(data, 0x600);
+					CAN_error_ID = CAN_Transmit(data, 0x600);
+					itoa(CAN_error_ID, str, 2);
+					DEBUG_Print(str);
 					break;
 				default:
 					DEBUG_Print("Invalid Command\r\n");
