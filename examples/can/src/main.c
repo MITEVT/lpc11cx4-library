@@ -44,6 +44,19 @@ void SysTick_Handler(void) {
 	msTicks++;
 }
 
+static void Print_Buffer(uint8_t* buff, uint8_t buff_size) {
+    Chip_UART_SendBlocking(LPC_USART, "0x", 2);
+    uint8_t i;
+    for(i = 0; i < buff_size; i++) {
+        itoa(buff[i], str, 16);
+        if(buff[i] < 16) {
+            Chip_UART_SendBlocking(LPC_USART, "0", 1);
+        }
+        Chip_UART_SendBlocking(LPC_USART, str, 2);
+    }
+    Chip_UART_SendBlocking(LPC_USART, "\n", 1);
+}
+
 
 int main(void)
 {
@@ -73,33 +86,30 @@ int main(void)
 	CAN_Init(TEST_CCAN_BAUD_RATE);
 	uint32_t CAN_error_ID;
 
-    uint32_t nxtMsg = msTicks+2000;
+    	uint32_t nxtMsg = msTicks+2000;
 
 	while (1) {
 
 		CAN_error_ID = CAN_Receive(&rx_buffer);
-        if(CAN_error_ID != 0){
-		    itoa(CAN_error_ID, str, 2);
-		    DEBUG_Print(str);
-        }
+		Print_Buffer(rx_buffer.data, rx_buffer.dlc);
 		uint8_t count;
 		uint8_t data[1];
 
-        if (nxtMsg < msTicks){
-            nxtMsg += 1000;
-            data[0] = 0xAA;
-            CAN_Transmit(data, 0x600);
-        }
+		if (nxtMsg < msTicks){
+		    nxtMsg += 1000;
+		    data[0] = 0xAA;
+		    CAN_Transmit(data, 0x600);
+		}
 		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
 			switch (uart_rx_buf[0]) {
 				case 'a':
 					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
 					data[0] = 0xAA;
 					CAN_error_ID = CAN_Transmit(data, 0x600);
-                    if(CAN_error_ID != 0){
+                    			if(CAN_error_ID != 0){
 					    itoa(CAN_error_ID, str, 2);
 					    DEBUG_Print(str);
-                    }
+                    			}
 					break;
 				default:
 					DEBUG_Print("Invalid Command\r\n");
