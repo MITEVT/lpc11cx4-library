@@ -108,13 +108,13 @@ void CAN_Init(uint32_t baud_rate) {
 	can_error_info = 0;
 }
 
-uint32_t CAN_Receive(CCAN_MSG_OBJ_T user_buffer) {
+uint32_t CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	if (can_error_flag) {
 		can_error_flag = false;
 		return can_error_info;
 	} else {
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
-			RingBuffer_Pop(&rx_buffer, &user_buffer);
+			RingBuffer_Pop(&rx_buffer, user_buffer);
 		}
 		return 0;
 	}

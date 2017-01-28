@@ -21,7 +21,8 @@ const uint32_t OscRateIn = 12000000;
 
 volatile uint32_t msTicks;
 
-
+CCAN_MSG_OBJ_T rx_buffer;
+uint32_t can_error_id;
 static char str[100];
 static char uart_rx_buf[UART_RX_BUFFER_SIZE];
 
@@ -54,6 +55,7 @@ int main(void)
 		while(1);
 	}
 
+
 	//---------------
 	//UART
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_6, (IOCON_FUNC1 | IOCON_MODE_INACT));/* RXD */
@@ -71,12 +73,17 @@ int main(void)
 	CAN_Init(TEST_CCAN_BAUD_RATE);
 
 	while (1) {
+
+		CAN_Receive(&rx_buffer);
 		
 		uint8_t count;
+		uint8_t data[1];
 		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
 			switch (uart_rx_buf[0]) {
 				case 'a':
 					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
+					data[0] = 0xAA;
+					CAN_Transmit(data, 0x600);
 					break;
 				default:
 					DEBUG_Print("Invalid Command\r\n");
