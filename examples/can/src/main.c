@@ -58,64 +58,66 @@ static void Print_Buffer(uint8_t* buff, uint8_t buff_size) {
 }
 
 
-int main(void)
-{
+int main(void) {
+	SystemCoreClockUpdate();
 
-    SystemCoreClockUpdate();
-
-    if (SysTick_Config (SystemCoreClock / 1000)) {
-        //Error
-        while(1);
-    }
+	if (SysTick_Config (SystemCoreClock / 1000)) {
+		//Error
+		while(1);
+	}
 
 
-    //---------------
-    //UART
-    Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_6, (IOCON_FUNC1 | IOCON_MODE_INACT));/* RXD */
-    Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_7, (IOCON_FUNC1 | IOCON_MODE_INACT));/* TXD */
+	//---------------
+	//UART
+	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_6, (IOCON_FUNC1 | IOCON_MODE_INACT));/* RXD */
+	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_7, (IOCON_FUNC1 | IOCON_MODE_INACT));/* TXD */
 
-    Chip_UART_Init(LPC_USART);
-    Chip_UART_SetBaud(LPC_USART, 57600);
-    Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT | UART_LCR_PARITY_DIS));
-    Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
-    Chip_UART_TXEnable(LPC_USART);
-    //---------------
+	Chip_UART_Init(LPC_USART);
+	Chip_UART_SetBaud(LPC_USART, 57600);
+	Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT | UART_LCR_PARITY_DIS));
+	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
+	Chip_UART_TXEnable(LPC_USART);
+	//---------------
 
-    DEBUG_Print("Started up\n\r");
+	DEBUG_Print("Started up\n\r");
 
-    CAN_Init(TEST_CCAN_BAUD_RATE);
-    uint32_t CAN_error_ID;
+	CAN_Init(TEST_CCAN_BAUD_RATE);
+	uint32_t can_error;
 
-        uint32_t nxtMsg = msTicks+2000;
+    uint32_t nxtMsg = msTicks+2000;
 
-    while (1) {
+	while (1) {
 
-        CAN_error_ID = CAN_Receive(&rx_buffer);
-        Print_Buffer(rx_buffer.data, rx_buffer.dlc);
-        uint8_t count;
-        uint8_t data[1];
+		can_error = CAN_Receive(&rx_buffer);
+		Print_Buffer(rx_buffer.data, rx_buffer.dlc);
+		if(can_error != 0){
+		    itoa(can_error, str, 2);
+		    DEBUG_Print(str);
+		}
+		uint8_t count;
+		uint8_t data[1];
 
-        if (nxtMsg < msTicks){
-            nxtMsg += 1000;
-            data[0] = 0xAA;
-            CAN_Transmit(data, 0x600);
-        }
-
-        if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
-            switch (uart_rx_buf[0]) {
-                case 'a':
-                    DEBUG_Print("Sending CAN with ID: 0x600\r\n");
-                    data[0] = 0xAA;
-                    CAN_error_ID = CAN_Transmit(data, 0x600);
-                    if(CAN_error_ID != 0){
-                        itoa(CAN_error_ID, str, 2);
-                        DEBUG_Print(str);
+		if (nxtMsg < msTicks){
+		    nxtMsg += 1000;
+		    data[0] = 0xAA;
+		    CAN_Transmit(data, 0x600);
+		}
+        
+		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
+			switch (uart_rx_buf[0]) {
+				case 'a':
+					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
+					data[0] = 0xAA;
+					can_error = CAN_Transmit(data, 0x600);
+                    if(can_error != 0){
+					    itoa(can_error, str, 2);
+					    DEBUG_Print(str);
                     }
-                    break;
-                default:
-                    DEBUG_Print("Invalid Command\r\n");
-                    break;
-            }
-        }
-    }
+					break;
+				default:
+					DEBUG_Print("Invalid Command\r\n");
+					break;
+			}
+		}
+	}
 }
