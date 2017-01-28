@@ -1,5 +1,6 @@
 #include "chip.h"
 #include <string.h>
+#include "can.h"
 
 #define CAN_BUF_SIZE 8
 
@@ -10,6 +11,7 @@ static bool can_error_flag;
 static uint32_t can_error_info;
 
 void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg);
+CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error);
 
 /*************************************************
  *                  HELPERS
@@ -39,6 +41,10 @@ void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
 			}
 		}
 	}
+}
+
+CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
+    return can_error;
 }
 
 /*************************************************
@@ -108,22 +114,23 @@ void CAN_Init(uint32_t baud_rate) {
 	can_error_info = 0;
 }
 
-uint32_t CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
+CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	if (can_error_flag) {
 		can_error_flag = false;
-		return can_error_info;
+		return Convert_To_CAN_Error(can_error_info);
 	} else {
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			RingBuffer_Pop(&rx_buffer, user_buffer);
-		}
-		return 0;
+		} else {
+            return NO_RX_CAN_MESSAGE;
+        }
 	}
 }
 
-uint32_t CAN_Transmit(uint8_t* data, uint32_t msg_id) {
+CAN_ERROR_T CAN_Transmit(uint8_t* data, uint32_t msg_id) {
 	if (can_error_flag) {
 		can_error_flag = false;
-		return can_error_info;
+		return Convert_To_CAN_Error(can_error_info);
 	} else {
 		msg_obj.msgobj = 2;
 		msg_obj.mode_id = msg_id;
@@ -133,11 +140,11 @@ uint32_t CAN_Transmit(uint8_t* data, uint32_t msg_id) {
 			msg_obj.data[i] = data[i];
 		}
 		LPC_CCAN_API->can_transmit(&msg_obj);
-		return 0;
+		return NO_CAN_ERROR;
 	}
 }
 
-uint32_t CAN_GetErrorStatus(void) {
-	return can_error_info;
+CAN_ERROR_T CAN_GetErrorStatus(void) {
+	return Convert_To_CAN_Error(can_error_info);
 }
 
