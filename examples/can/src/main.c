@@ -10,8 +10,6 @@
  * Private types/enumerations/variables
  ****************************************************************************/
 
-#define TEST_CCAN_BAUD_RATE 500000
-
 #define LED_PORT 0
 #define LED_PIN 7
 
@@ -22,7 +20,7 @@ const uint32_t OscRateIn = 12000000;
 
 volatile uint32_t msTicks;
 
-CCAN_MSG_OBJ_T rx_buffer;
+CCAN_MSG_OBJ_T rx_msg;
 static char str[100];
 static char uart_rx_buf[UART_RX_BUFFER_SIZE];
 
@@ -81,15 +79,15 @@ int main(void) {
 
 	DEBUG_Print("Started up\n\r");
 
-	CAN_Init(TEST_CCAN_BAUD_RATE);
-	uint32_t can_error;
+	CAN_Init(500000);
 
+	uint32_t can_error;
     uint32_t nxtMsg = msTicks+2000;
 
 	while (1) {
 
-		can_error = CAN_Receive(&rx_buffer);
-		Print_Buffer(rx_buffer.data, rx_buffer.dlc);
+		can_error = CAN_Receive(&rx_msg);
+		Print_Buffer(rx_msg.data, rx_msg.dlc);
 		if(can_error != 0){
 		    itoa(can_error, str, 2);
 		    DEBUG_Print(str);
@@ -97,7 +95,7 @@ int main(void) {
 		uint8_t count;
 		uint8_t data[1];
 
-		if (nxtMsg < msTicks){
+		if (nxtMsg < msTicks % 1000 == 0){
 		    nxtMsg += 1000;
 		    data[0] = 0xAA;
 		    CAN_Transmit(data, 0x600);
