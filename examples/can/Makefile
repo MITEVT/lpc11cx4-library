@@ -48,7 +48,7 @@ AS_DEFS = -D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
 
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
-INC_DIRS = ../../lpc_chip_11cxx_lib/inc ../../evt_lib/inc
+INC_DIRS = ../../lpc_chip_11cxx_lib/inc/ ../../evt_lib/inc/
 
 # library directories (absolute or relative paths to additional folders with
 # libraries)
@@ -109,7 +109,7 @@ C_STD = gnu89
 #=============================================================================#
 
 COMPORT = $(word 1, $(wildcard /dev/tty.usbserial-*) $(wildcard /dev/ttyUSB*))
-BAUDRATE = 115200
+BAUDRATE = 57600
 CLOCK_OSC = 12000
 
 #=============================================================================#
@@ -293,7 +293,7 @@ make_output_dir :
 
 writeflash: all
 	@echo "Writing to" $(COMPORT)
-	@lpc21isp -NXPARM $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
+	lpc21isp -NXPARM -control $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #-----------------------------------------------------------------------------#
 # Open up in picocom
@@ -301,7 +301,7 @@ writeflash: all
 
 com:
 	@echo "Opening" $(COMPORT)
-	picocom $(COMPORT)
+	lpc21isp -NXPARM -control -termonly $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
 #=============================================================================#
 # make clean
