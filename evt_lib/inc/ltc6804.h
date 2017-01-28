@@ -5,6 +5,12 @@
 #include <string.h>
 #include <stdint.h>
 
+#define LTC6804_COMMAND_LEN 4
+#define LTC6804_DATA_LEN 6
+#define LTC6804_CALC_BUFFER_LEN(max_modules) (LTC6804_COMMAND_LEN+LTC6804_DATA_LEN*max_modules)
+
+
+
 /* =================== TIMING MACROS ================== */
 
 #define T_REFUP 5
