@@ -1,21 +1,8 @@
 /*****************************************************************************/
 /* startup_LPC11xx.s: Startup file for ARM CM0 device series                 */
 /*****************************************************************************/
-/* Version: CodeSourcery Sourcery G++ Lite (with CS3)                        */
-/*****************************************************************************/
 
-
-/*
-//*** <<< Use Configuration Wizard in Context Menu >>> ***
-*/
-
-
-/*
-// <h> Stack Configuration
-//   <o> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
-// </h>
-*/
-
+/* Stack */
 
     .section .stack
     .align  3
@@ -31,31 +18,6 @@ __StackLimit:
     .size   __StackLimit, . - __StackLimit
 __StackTop:
     .size   __StackTop, . - __StackTop
-
-
-/*
-// <h> Heap Configuration
-//   <o>  Heap Size (in Bytes) <0x0-0xFFFFFFFF:8>
-// </h>
-*/
-
-    .section .heap
-    .align  3
-#ifdef __HEAP_SIZE
-    .equ    Heap_Size, __HEAP_SIZE
-#else
-    .equ    Heap_Size, 0x00001000
-#endif
-    .globl  __HeapBase
-    .globl  __HeapLimit
-__HeapBase:
-    .if Heap_Size
-    .space  Heap_Size
-    .endif
-    .size   __HeapBase, . - __HeapBase
-__HeapLimit:
-    .size   __HeapLimit, . - __HeapLimit
-
 
 /* Vector Table */
 

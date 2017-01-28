@@ -78,15 +78,15 @@ int main(void) {
 		while(1); // error state
 	}
 
-    address[0] = 0x0;
-    address[1] = 0xF;
-    address[2] = 0xF;
+    address[0] = 0x00;
+    address[1] = 0x0F;
+    address[2] = 0x0F;
 
 	GPIO_Config();
 	LED_Config();
 
     uart_init();
-    LC1024_Init(600000, 0, 7);
+    LC1024_Init(LPC_SSP1, 600000, 0, 7);
     
     ZeroRxBuf();
 
@@ -99,12 +99,14 @@ int main(void) {
     Chip_UART_SendBlocking(LPC_USART, "STATUS REG:\n", 12);
     PrintRxBuffer();
 
-    data[0] = 0xE;
-    data[1] = 0xE;
+    data[0] = 0x0E;
+    data[1] = 0x0E;
 
     LC1024_WriteMem(&address[0], &data[0], 2);
     Chip_UART_SendBlocking(LPC_USART, "writing D to memory...\n", 23);
     // PrintRxBuffer();
+
+    delay(5);
 
     LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
     
@@ -115,11 +117,13 @@ int main(void) {
         PrintRxBuffer();
     }
 
-    data[0] = 0xA;
-    data[1] = 0xA;
+    data[0] = 0x0A;
+    data[1] = 0x0A;
 
     LC1024_WriteMem(&address[0], &data[0], 2);
     Chip_UART_SendBlocking(LPC_USART, "writing A to memory...\n", 23);
+
+    delay(5);
 
     LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
 

@@ -1,5 +1,7 @@
 #ifndef _LC1024_H_
-#define _LTC6804_H_
+#define _LC1024_H_
+
+#include "chip.h"
 
 #define RD_STATUS_REG_INSTR 0x5
 #define WRITE_DISABLE_INSTR 0x4
@@ -8,7 +10,7 @@
 #define WRITE_ENABLE_INSTR 0x6
 
 // USES LPC_SSP1
-void LC1024_Init(uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin);
+void LC1024_Init(LPC_SSP_T *pSSP, uint32_t baud, uint8_t cs_gpio, uint8_t cs_pin);
 
 // address can be array of atmost at most size 3 (uses only first three bytes)
 void LC1024_ReadStatusReg(uint8_t* data);

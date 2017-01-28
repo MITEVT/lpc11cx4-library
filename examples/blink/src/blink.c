@@ -1,12 +1,10 @@
-
 #include "chip.h"
+#include "sysinit.h"
 
-const uint32_t OscRateIn = 12000000;
+const uint32_t OscRateIn = 0;
 
-#define LED0 2, 5
-#define LED1 0, 6
-#define LED2 0, 7
-#define LED3 2, 9
+#define LED0 2, 8
+#define LED1 2, 7
 
 volatile uint32_t msTicks;
 
@@ -19,39 +17,13 @@ static void Delay(uint32_t dlyTicks) {
 	while ((msTicks - curTicks) < dlyTicks);
 }
 
-static void GPIO_Config(void) {
-	Chip_GPIO_Init(LPC_GPIO);
-
-}
-
-static void LED_Init(uint8_t port, uint8_t pin) {
-	Chip_GPIO_WriteDirBit(LPC_GPIO, port, pin, true);
-	Chip_GPIO_SetPinState(LPC_GPIO, port, pin, false);
-
-}
-
-static void LED_Write(uint8_t port, uint8_t pin, uint8_t val) {
-	Chip_GPIO_SetPinState(LPC_GPIO, port, pin, val);
-}
-
 int main (void) {
 
-	SystemCoreClockUpdate();
+	SysTick_Config(TicksPerMS);
 
-
-	if (SysTick_Config (SystemCoreClock / 1000)) {
-		//Error
-		while(1);
-	}
-
-	
-
-	LED_Init(LED0);
-	LED_Init(LED1);
-	LED_Init(LED2);
-	LED_Init(LED3);
-
-	GPIO_Config();
+	Chip_GPIO_Init(LPC_GPIO);
+	Chip_GPIO_WriteDirBit(LPC_GPIO, LED0, true);
+	Chip_GPIO_WriteDirBit(LPC_GPIO, LED1, true);
 
 	uint8_t i = 1;
 	uint16_t delay = 500;
@@ -60,17 +32,11 @@ int main (void) {
 		i = 1 - i;
 		delay = (i) ? 500 : 250;
 
-		LED_Write(LED3, false);
-		LED_Write(LED0, true);
+		Chip_GPIO_SetPinState(LPC_GPIO, LED1, false);
+		Chip_GPIO_SetPinState(LPC_GPIO, LED0, true);
 		Delay(delay);
-		LED_Write(LED0, false);
-		LED_Write(LED1, true);
-		Delay(delay);
-		LED_Write(LED1, false);
-		LED_Write(LED2, true);
-		Delay(delay);
-		LED_Write(LED2, false);
-		LED_Write(LED3, true);
+		Chip_GPIO_SetPinState(LPC_GPIO, LED0, false);
+		Chip_GPIO_SetPinState(LPC_GPIO, LED1, true);
 		Delay(delay);
 	}
 }

@@ -60,4 +60,23 @@ F 8 "3.63 USD" H 5200 1800 50  0001 L CNN "Price"
 	1    5200 1800
 	1    0    0    -1  
 $EndComp
+$Comp
+L CONN_01X06 P?
+U 1 1 584CE26C
+P 3850 1800
+F 0 "P?" H 3850 2150 50  0000 C CNN
+F 1 "CONN_01X06" V 3950 1800 50  0000 C CNN
+F 2 "" H 3850 1800 50  0000 C CNN
+F 3 "" H 3850 1800 50  0000 C CNN
+	1    3850 1800
+	1    0    0    -1  
+$EndComp
+Text HLabel 3650 1550 0    60   Input ~ 0
+RST
+Text HLabel 3650 1650 0    60   Input ~ 0
+PRGM
+Text HLabel 3650 1750 0    60   Input ~ 0
+CAN_RXD
+Text HLabel 3650 1850 0    60   Input ~ 0
+CAN_TXD
 $EndSCHEMATC
