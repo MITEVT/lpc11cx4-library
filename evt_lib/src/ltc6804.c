@@ -6,6 +6,9 @@
 
 #define WAKE_BUF_LEN 40
 static uint8_t wake_buf[WAKE_BUF_LEN];
+static uint8_t owt_state;
+static uint32_t owt_time;
+static uint8_t owt_up_rx_buf[4][LTC6804_CALC_BUFFER_LEN(15)]; 
 
 #define _IS_ASLEEP(state, msTicks) (msTicks - state->last_message > T_SLEEP)
 #define _IS_IDLE(state, msTicks) (msTicks - state->last_message > T_IDLE)
@@ -15,14 +18,13 @@ static uint8_t wake_buf[WAKE_BUF_LEN];
 		Private Function Prototypes
 ****************************************/
 
-uint16_t _calculate_pec(uint8_t *data, uint8_t len);
-LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force);
-bool _check_st_results(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state);
 LTC6804_STATUS_T _command(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
 LTC6804_STATUS_T _write(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
 LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
+LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force);
 LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
-
+uint16_t _calculate_pec(uint8_t *data, uint8_t len);
+bool _check_st_results(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state);
 
 /***************************************
 		Public Functions
@@ -55,6 +57,8 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	state->wait_time = LTC6804_ADC_MODE_WAIT_TIMES[config->adc_mode];
 	state->last_sleep_wake = msTicks;
 	state->balancing = false;
+
+	owt_state = 0;
 
 	memset(wake_buf, 0, WAKE_BUF_LEN);
 
@@ -126,6 +130,93 @@ LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	}
 }
 
+LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+	if (_IS_ASLEEP(state, msTicks)) {
+		_wake(config, state, msTicks, false);
+		return LTC6804_WAITING;
+	} else if (!_IS_REFUP(state, msTicks)) {
+		return LTC6804_WAITING_REFUP;
+	}
+
+	switch(owt_state) {
+		case 0:
+			owt_state = 1;
+			owt_time = msTicks;
+			_command(config, state, (config->adc_mode << 7) | 0x268, msTicks);
+			return LTC6804_WAITING;
+		case 1:
+			if (msTicks - owt_time > state->wait_time) {
+				owt_state = 2;
+				owt_time = msTicks;
+				_command(config, state, (config->adc_mode << 7) | 0x268, msTicks);
+			}
+			return LTC6804_WAITING;
+		case 2:
+			if (msTicks - owt_time > state->wait_time) {
+				uint8_t *normal_rx_ptr = state->rx_buf;
+				state->rx_buf = owt_up_rx_buf[0];
+				LTC6804_STATUS_T r;
+				r = _read(config, state, RDCVA, msTicks);
+				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+				state->rx_buf = owt_up_rx_buf[1];
+				r = _read(config, state, RDCVB, msTicks);
+				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+				state->rx_buf = owt_up_rx_buf[2];
+				r = _read(config, state, RDCVC, msTicks);
+				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+				state->rx_buf = owt_up_rx_buf[3];
+				r = _read(config, state, RDCVD, msTicks);
+				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+				state->rx_buf = normal_rx_ptr;
+				owt_state = 3;
+				owt_time = msTicks;
+				_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
+			}
+			return LTC6804_WAITING;
+		case 3:
+			if (msTicks - owt_time > state->wait_time) {
+				owt_state = 4;
+				owt_time = msTicks;
+				_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
+			}
+			return LTC6804_WAITING;
+		case 4:
+			if (msTicks - owt_time > state->wait_time) {
+				LTC6804_STATUS_T r;
+				r = _read(config, state, RDCVA, msTicks);
+				if (r != LTC6804_PASS) {return r;}
+				r = _read(config, state, RDCVB, msTicks);
+				if (r != LTC6804_PASS) {return r;}
+				r = _read(config, state, RDCVC, msTicks);
+				if (r != LTC6804_PASS) {return r;}
+				r = _read(config, state, RDCVD, msTicks);
+				if (r != LTC6804_PASS) {return r;}
+				owt_state = 0;
+				owt_time = msTicks;
+			}
+			return LTC6804_WAITING;
+	}
+}
+
+// void LTC6804_OpenWireTestCmd(uint8_t pup_bit, uint32_t msTicks) {
+// 	Tx_Buf[0] = 0x03;
+//     if(pup_bit == 0) {
+// 	    Tx_Buf[1] = 0x28;
+//     } else {
+// 	    Tx_Buf[1] = 0x68;
+//     }
+// 	uint16_t pec = _calculate_pec(Tx_Buf, 2);
+// 	Tx_Buf[2] = pec >> 8;
+// 	Tx_Buf[3] = pec & 0xFF;
+
+// 	_wake(msTicks);
+
+// 	_last_message = msTicks;
+// 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
+// 	Chip_SSP_WriteFrames_Blocking(_pSSP, Tx_Buf, 4);
+// 	Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
+// }
+
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks) {
 	bool *bal_ptr = balance_req;
 	bool change = false;
@@ -150,47 +241,6 @@ LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_S
 		return LTC6804_PASS;
 	}
 }
-
-LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
-	int i;
-	for (i = 0; i < config->num_modules; i++) {
-		uint8_t *tx_ptr = state->tx_buf + 4 + 8 * i;
-		tx_ptr[0] = state->cfg[0]; tx_ptr[1] = state->cfg[1];
-		tx_ptr[2] = state->cfg[2]; tx_ptr[3] = state->cfg[3];
-		tx_ptr[4] = state->bal_list[i] & 0xFF;
-		tx_ptr[5] = (state->cfg[5] & 0xF0) | (state->bal_list[i] >> 8);
-		uint16_t pec = _calculate_pec(tx_ptr, 6);
-		tx_ptr[6] = pec >> 8;
-		tx_ptr[7] = pec & 0xFF;
-	}
-	return _write(config, state, WRCFG, msTicks);
-}
-
-// LTC6804_STATUS_T LTC6804_SetBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks) {
-	
-// 	bool *bal_ptr = balance_req;
-// 	int i, j;
-// 	state->balancing = false;
-// 	for (i = 0; i < config->num_modules; i++) {
-// 		state->bal_list[i] = 0;
-// 		uint8_t *tx_ptr = state->tx_buf + 4 + 8 * i;
-// 		for (j = 0; j < config->module_cell_count[i]; j++) {
-// 			state->bal_list[i] |= bal_ptr[0] << j;
-// 			bal_ptr++;
-// 		}
-// 		tx_ptr[0] = state->cfg[0]; tx_ptr[1] = state->cfg[1];
-// 		tx_ptr[2] = state->cfg[2]; tx_ptr[3] = state->cfg[3];
-// 		tx_ptr[4] = state->bal_list[i] & 0xFF;
-// 		tx_ptr[5] = (state->cfg[5] & 0xF0) | (state->bal_list[i] >> 8);
-// 		uint16_t pec = _calculate_pec(tx_ptr, 6);
-// 		tx_ptr[6] = pec >> 8;
-// 		tx_ptr[7] = pec & 0xFF;
-
-// 		if (state->bal_list[i]) state->balancing = true;
-// 	}
-
-// 	return _write(config, state, WRCFG, msTicks);
-// }
 
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks) {
 	if (_IS_ASLEEP(state, msTicks)) {
@@ -378,6 +428,21 @@ LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_
 
 	if (res == ERROR) return LTC6804_SPI_ERROR;
 	return LTC6804_PASS;
+}
+
+LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+	int i;
+	for (i = 0; i < config->num_modules; i++) {
+		uint8_t *tx_ptr = state->tx_buf + 4 + 8 * i;
+		tx_ptr[0] = state->cfg[0]; tx_ptr[1] = state->cfg[1];
+		tx_ptr[2] = state->cfg[2]; tx_ptr[3] = state->cfg[3];
+		tx_ptr[4] = state->bal_list[i] & 0xFF;
+		tx_ptr[5] = (state->cfg[5] & 0xF0) | (state->bal_list[i] >> 8);
+		uint16_t pec = _calculate_pec(tx_ptr, 6);
+		tx_ptr[6] = pec >> 8;
+		tx_ptr[7] = pec & 0xFF;
+	}
+	return _write(config, state, WRCFG, msTicks);
 }
 
 uint16_t _calculate_pec(uint8_t *data, uint8_t len) {
