@@ -61,7 +61,9 @@ void CAN_rx(uint8_t msg_obj_num) {
 }
 
 /*	CAN transmit callback */
-void CAN_tx(uint8_t msg_obj_num) {}
+void CAN_tx(uint8_t msg_obj_num) {
+	UNUSED(msg_obj_num);
+}
 
 /*	CAN error callback */
 void CAN_error(uint32_t error_info) {
@@ -121,6 +123,7 @@ CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	} else {
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			RingBuffer_Pop(&rx_buffer, user_buffer);
+			return NO_CAN_ERROR;
 		} else {
             return NO_RX_CAN_MESSAGE;
         }
