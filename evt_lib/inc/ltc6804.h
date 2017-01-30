@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #define LTC6804_COMMAND_LEN 4
-#define LTC6804_DATA_LEN 6
+#define LTC6804_DATA_LEN 8
 #define LTC6804_CALC_BUFFER_LEN(max_modules) (LTC6804_COMMAND_LEN+LTC6804_DATA_LEN*max_modules)
 
 
@@ -81,7 +81,7 @@ typedef enum {
 } LTC6804_ADC_MODE_T;
 
 static const uint8_t LTC6804_ADC_MODE_WAIT_TIMES[] = {
-	0, 2, 3, 202
+	0, 2, 4, 202
 };
 
 static const uint16_t LTC6804_SELF_TEST_RES[] = {
@@ -143,5 +143,12 @@ LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T 
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_ClearCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+
+
+LTC6804_STATUS_T _command(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
+LTC6804_STATUS_T _write(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
+LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
+LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force);
+LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 #endif
