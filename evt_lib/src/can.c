@@ -61,7 +61,9 @@ void CAN_rx(uint8_t msg_obj_num) {
 }
 
 /*	CAN transmit callback */
-void CAN_tx(uint8_t msg_obj_num) {}
+void CAN_tx(uint8_t msg_obj_num) {
+	UNUSED(msg_obj_num);
+}
 
 /*	CAN error callback */
 void CAN_error(uint32_t error_info) {

@@ -32,6 +32,7 @@
 *.hex
 *.axf
 *.map
+.DS_Store
 
 # Build Directories
 **/bin/

@@ -92,15 +92,41 @@ __isr_vector:
 
 Reset_Handler:
     .fnstart
-    LDR     R0, =SystemInit
-    BLX     R0
-.if (RAM_MODE)
-    LDR     R0,=main
-    BX      R0
-.else
-	LDR     R0,=_start
-    BX      R0
-.endif
+
+#ifdef __STARTUP_CLEAR_BSS
+/*  Single BSS section scheme.
+ *
+ *  The BSS section is specified by following symbols
+ *    __bss_start__: start of the BSS section.
+ *    __bss_end__: end of the BSS section.
+ *
+ *  Both addresses must be aligned to 4 bytes boundary.
+ */
+    ldr r1, =__bss_start__
+    ldr r2, =__bss_end__
+
+    movs    r0, #0
+
+    sub    r2, r1
+    ble .L_loop3_done
+
+.L_loop3:
+    sub    r2, #4
+    str r0, [r1, r2]
+    bgt .L_loop3
+.L_loop3_done:
+#endif /* __STARTUP_CLEAR_BSS */
+
+
+#ifndef __NO_SYSTEM_INIT
+    bl  SystemInit
+#endif
+
+#ifndef __START
+#define __START _start
+#endif
+    bl  __START
+
     .pool
     .cantunwind
     .fnend
