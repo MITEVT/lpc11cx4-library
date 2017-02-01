@@ -52,7 +52,6 @@ static void Print_Buffer(uint8_t* buff, uint8_t buff_size) {
         }
         Chip_UART_SendBlocking(LPC_USART, str, 2);
     }
-    Chip_UART_SendBlocking(LPC_USART, "\n", 1);
 }
 
 
@@ -65,38 +64,45 @@ int main(void) {
 	}
 
 
-	//---------------
-	//UART
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_6, (IOCON_FUNC1 | IOCON_MODE_INACT));/* RXD */
-	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_7, (IOCON_FUNC1 | IOCON_MODE_INACT));/* TXD */
+	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_6, (IOCON_FUNC1 | IOCON_MODE_INACT)); /* RXD */
+	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_7, (IOCON_FUNC1 | IOCON_MODE_INACT)); /* TXD */
 
 	Chip_UART_Init(LPC_USART);
 	Chip_UART_SetBaud(LPC_USART, 57600);
 	Chip_UART_ConfigData(LPC_USART, (UART_LCR_WLEN8 | UART_LCR_SBS_1BIT | UART_LCR_PARITY_DIS));
 	Chip_UART_SetupFIFOS(LPC_USART, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
 	Chip_UART_TXEnable(LPC_USART);
-	//---------------
 
 	DEBUG_Print("Started up\n\r");
 
 	CAN_Init(500000);
 
-	uint32_t can_error;
-    uint32_t nxtMsg = msTicks+2000;
+	uint32_t ret;
 
 	while (1) {
-
-		can_error = CAN_Receive(&rx_msg);
-		Print_Buffer(rx_msg.data, rx_msg.dlc);
-		if(can_error != 0){
-		    itoa(can_error, str, 2);
-		    DEBUG_Print(str);
-		}
 		uint8_t count;
 		uint8_t data[1];
 
-		if (nxtMsg < msTicks % 1000 == 0){
-		    nxtMsg += 1000;
+		if (msTicks % 1000 == 0){
+            // recieve message if there is a message
+		    ret = CAN_Receive(&rx_msg);
+            if(ret == NO_RX_CAN_MESSAGE) {
+                DEBUG_Print("No CAN message received...\r\n");
+            } else if(ret == NO_CAN_ERROR) {
+                DEBUG_Print("Recieved data ");
+                Print_Buffer(rx_msg.data, rx_msg.dlc);
+                DEBUG_Print(" from ");
+                itoa(rx_msg.mode_id, str, 16);
+                DEBUG_Print(str);
+                DEBUG_Print("\r\n");
+            } else {
+                DEBUG_Print("CAN Error: ");
+                itoa(ret, str, 2);
+                DEBUG_Print(str);
+                DEBUG_Print("\r\n");
+            }
+
+            // transmit a message!
 		    data[0] = 0xAA;
 		    CAN_Transmit(data, 0x600);
 		}
@@ -106,10 +112,12 @@ int main(void) {
 				case 'a':
 					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
 					data[0] = 0xAA;
-					can_error = CAN_Transmit(data, 0x600);
-                    if(can_error != 0){
-					    itoa(can_error, str, 2);
+					ret = CAN_Transmit(data, 0x600);
+                    if(ret != NO_CAN_ERROR) {
+                        DEBUG_Print("CAN Error: ");
+					    itoa(ret, str, 2);
 					    DEBUG_Print(str);
+                        DEBUG_Print("\r\n");
                     }
 					break;
 				default:
