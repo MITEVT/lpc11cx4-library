@@ -6,7 +6,7 @@
 
 #define WAKE_BUF_LEN 40
 static uint8_t wake_buf[WAKE_BUF_LEN];
-static uint8_t owt_state;
+static uint16_t owt_state;
 static uint32_t owt_time;
 static uint8_t owt_up_rx_buf[4][LTC6804_CALC_BUFFER_LEN(15)]; 
 
@@ -55,6 +55,7 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	state->wake_length = 3*config->baud/80000 + 1; // [TODO] Remember how this was calculated
 	state->waiting = false;
 	state->wait_time = LTC6804_ADC_MODE_WAIT_TIMES[config->adc_mode];
+	// state->wait_time = 7; // [TODO] Remove
 	state->last_sleep_wake = msTicks;
 	state->balancing = false;
 
@@ -130,256 +131,377 @@ LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	}
 }
 
-// [TODO] Return Cell and Module Failure
-// [TODO] Lock out ADC if running
-// [TODO] Lock out if ADC running
-LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
-	if (_IS_ASLEEP(state, msTicks)) {
-		_wake(config, state, msTicks, false);
+static uint32_t cell_voltages[2][15*12];
+static LTC6804_ADC_RES_T adc_res;
+static uint16_t cmd;
+
+#define LENGTH 35
+
+// [TODO] Test with pin toggling
+LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, volatile uint32_t *msTicks) {
+	if (_IS_ASLEEP(state, *msTicks)) {
+		_wake(config, state, *msTicks, false);
 		return LTC6804_WAITING;
-	} else if (!_IS_REFUP(state, msTicks)) {
+	} else if (!_IS_REFUP(state, *msTicks)) {
+		// Chip_UART_SendBlocking(LPC_USART, "ref\r\n", 5);
 		return LTC6804_WAITING_REFUP;
 	}
 
 	int i;
-	switch(owt_state) {
-		case 0:
-			owt_state++;
-			owt_time = msTicks;
-			_command(config, state, (config->adc_mode << 7) | 0x268, msTicks);
-			return LTC6804_WAITING;
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-		case 9:
-			if (msTicks - owt_time > state->wait_time) {
-				owt_state++;
-				owt_time = msTicks;
-				_command(config, state, (config->adc_mode << 7) | 0x268, msTicks);
-			}
-			return LTC6804_WAITING;
-		case 10:
-			if (msTicks - owt_time > state->wait_time) {
-				uint8_t *normal_rx_ptr = state->rx_buf;
-				state->rx_buf = owt_up_rx_buf[0];
-				LTC6804_STATUS_T r;
-				r = _read(config, state, RDCVA, msTicks);
-				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
-				for (i = 0; i < config->num_modules; i++) {
-					uint8_t *rx_ptr = owt_up_rx_buf[0] + 4 + 8 * i;
-					if (rx_ptr[0] == 0 && rx_ptr[1] == 0) {
-						state->rx_buf = normal_rx_ptr;
-						owt_state = 0;
-						return LTC6804_FAIL; // [TODO] Also return module and cell 0
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, "C[0], ", 6);
-					}
-					if (rx_ptr[0] == 0xFF || rx_ptr[1] == 0xFF) {
-						Chip_UART_SendBlocking(LPC_USART, "FUCK ", 5);
-					}
-				}
-				state->rx_buf = owt_up_rx_buf[1];
-				r = _read(config, state, RDCVB, msTicks);
-				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
-				state->rx_buf = owt_up_rx_buf[2];
-				r = _read(config, state, RDCVC, msTicks);
-				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
-				state->rx_buf = owt_up_rx_buf[3];
-				r = _read(config, state, RDCVD, msTicks);
-				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
-				state->rx_buf = normal_rx_ptr;
-				owt_state++;
-				owt_time = msTicks;
-				_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
-			}
-			return LTC6804_WAITING;
-		case 11:
-		case 12:
-		case 13:
-		case 14:
-		case 15:
-		case 16:
-		case 17:
-		case 18:
-		case 19:
-			if (msTicks - owt_time > state->wait_time) {
-				owt_state++;
-				owt_time = msTicks;
-				_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
-			}
-			return LTC6804_WAITING;
-		case 20:
-			if (msTicks - owt_time > state->wait_time) {
-				LTC6804_STATUS_T r;
-				uint8_t str[5];
-				int32_t c_up, c_down;
-				r = _read(config, state, RDCVA, msTicks);
-				if (r != LTC6804_PASS) {return r;}
-				for (i = 0; i < config->num_modules; i++) {
-					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
-					uint8_t *owt_ptr = owt_up_rx_buf[0] + 4 + 8 * i;
-					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
-					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up -  c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[1] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[1], ", 6);
-					}
-					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
-					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up -  c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[2] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[2], ", 6);
-					}
-				}
-				r = _read(config, state, RDCVB, msTicks);
-				if (r != LTC6804_PASS) {return r;}
-				for (i = 0; i < config->num_modules; i++) {
-					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
-					uint8_t *owt_ptr = owt_up_rx_buf[1] + 4 + 8 * i;
-					c_up = (owt_ptr[1] << 8) | owt_ptr[0];
-					c_down = (rx_ptr[1] << 8) | rx_ptr[0];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[3] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[3], ", 6);
-					}
-					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
-					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[4] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[4], ", 6);
-					}
-					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
-					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[5] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[5], ", 6);
-					}
-				}
-				r = _read(config, state, RDCVC, msTicks);
-				if (r != LTC6804_PASS) {return r;}
-				for (i = 0; i < config->num_modules; i++) {
-					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
-					uint8_t *owt_ptr = owt_up_rx_buf[2] + 4 + 8 * i;
-					c_up = (owt_ptr[1] << 8) | owt_ptr[0];
-					c_down = (rx_ptr[1] << 8) | rx_ptr[0];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up -  c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[6] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[6], ", 6);
-					}
-					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
-					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up -  c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[7] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[7], ", 6);
-					}
-					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
-					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[8] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[8], ", 6);
-					}
-				}
-				r = _read(config, state, RDCVD, msTicks);
-				if (r != LTC6804_PASS) {return r;}
-				for (i = 0; i < config->num_modules; i++) {
-					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
-					uint8_t *owt_ptr = owt_up_rx_buf[3] + 4 + 8 * i;
-					c_up = (owt_ptr[1] << 8) | owt_ptr[0];
-					c_down = (rx_ptr[1] << 8) | rx_ptr[0];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[9] Fail
-					}  else {
-						Chip_UART_SendBlocking(LPC_USART, " C[9], ", 6);
-					}
-					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
-					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[10] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[10], ", 7);
-					}
-					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
-					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
-					itoa(c_up - c_down, str, 10);
-					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
-					if (c_up - c_down < -4000) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[11] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[11], ", 7);
-					}
-					if (rx_ptr[5] == 0 && rx_ptr[4] == 0) {
-						Chip_UART_SendBlocking(LPC_USART, ", ", 2);
-						owt_state = 0;
-						return LTC6804_FAIL; // C[12] Fail
-					} else {
-						Chip_UART_SendBlocking(LPC_USART, " C[12]", 5);
-					}
+	LTC6804_STATUS_T r;
+	if (owt_state <= LENGTH) {
+		if (*msTicks - owt_time > state->wait_time) {
+			// if (owt_state == 0){
+			// 	Chip_GPIO_SetPinState(LPC_GPIO, 1,3,1 - Chip_GPIO_GetPinState(LPC_GPIO, 1,3));
 
-				}
-				owt_state = 0;
-				owt_time = msTicks;
-				return LTC6804_PASS;
+			// }
+			owt_state++;
+			owt_time = *msTicks;
+			r = _command(config, state, (config->adc_mode << 7) | 0x268, *msTicks);
+		}
+		return LTC6804_WAITING;
+	} else if (owt_state == LENGTH+1) {
+		adc_res.cell_voltages_mV = cell_voltages[0];
+		cmd = 0x268;
+		r = LTC6804_GetCellVoltages(config, state, &adc_res, *msTicks);
+		if (r == LTC6804_PASS) {
+			owt_time = *msTicks;
+			owt_state++;
+		}
+		return LTC6804_WAITING;
+	} else if (owt_state <= LENGTH*2) {
+		if (*msTicks - owt_time > state->wait_time) {
+			owt_state++;
+			owt_time = *msTicks;
+			_command(config, state, (config->adc_mode << 7) | 0x228, *msTicks);
+		}
+		return LTC6804_WAITING;
+	} else if (owt_state == LENGTH*2+1) {
+
+		adc_res.cell_voltages_mV = cell_voltages[1];
+		cmd = 0x228;
+		r = LTC6804_GetCellVoltages(config, state, &adc_res, *msTicks);
+		if (r == LTC6804_PASS) {
+			owt_time = *msTicks;
+			owt_state = 0;
+			if (cell_voltages[0][0] == 0) {
+				return LTC6804_FAIL;
 			}
-			return LTC6804_WAITING;
-		default:
-			return LTC6804_FAIL; // What happened here
+			if (cell_voltages[1][11] == 0) {
+				return LTC6804_FAIL;
+			}
+			// uint8_t str[10];
+			// for (i = 0; i < 12; i++) {
+			// 	itoa((int32_t)(cell_voltages[0][i]), str, 10);
+			// 	Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+			// 	Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+			// 	itoa((int32_t)(cell_voltages[1][i]), str, 10);
+			// 	Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+			// 	Chip_UART_SendBlocking(LPC_USART, "\n\r ", 2);
+			// }
+			// Chip_UART_SendBlocking(LPC_USART, "\n\r ", 2);
+
+			for (i = 1; i < 12; i++) {
+				// itoa((int32_t)(cell_voltages[0][i]) - (int32_t)(cell_voltages[1][i]), str, 10);
+				// Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+				// Chip_UART_SendBlocking(LPC_USART, ", ", 3);
+				if ((int32_t)(cell_voltages[0][i]) - (int32_t)(cell_voltages[1][i]) < -400) {
+					// itoa((int32_t)(cell_voltages[0][i]) - (int32_t)(cell_voltages[1][i]), str, 10);
+					// Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+					// Chip_UART_SendBlocking(LPC_USART, " (", 2);
+					// itoa(i, str, 10);
+					// Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+					// Chip_UART_SendBlocking(LPC_USART, ")", 1);
+					return LTC6804_FAIL;
+				}
+				// Board_Print_BLOCKING("\r\n");
+			}
+			
+			
+			return LTC6804_PASS;
+		} else if (r == LTC6804_PEC_ERROR) {
+			return r;
+		}
+		return LTC6804_WAITING;
+	} else {
+		return LTC6804_FAIL;
 	}
 }
+
+// [TODO] Return Cell and Module Failure
+// [TODO] Lock out ADC if running
+// [TODO] Lock out if ADC running
+// LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+// 	if (_IS_ASLEEP(state, msTicks)) {
+// 		_wake(config, state, msTicks, false);
+// 		return LTC6804_WAITING;
+// 	} else if (!_IS_REFUP(state, msTicks)) {
+// 		return LTC6804_WAITING_REFUP;
+// 	}
+
+// 	int i;
+// 	switch(owt_state) {
+// 		case 0:
+// 			owt_state++;
+// 			owt_time = msTicks;
+// 			_command(config, state, (config->adc_mode << 7) | 0x268, msTicks);
+// 			return LTC6804_WAITING;
+// 		case 1:
+// 		case 2:
+// 		case 3:
+// 		case 4:
+// 		case 5:
+// 		case 6:
+// 		case 7:
+// 		case 8:
+// 		case 9:
+// 			if (msTicks - owt_time > state->wait_time) {
+// 				owt_state++;
+// 				owt_time = msTicks;
+// 				_command(config, state, (config->adc_mode << 7) | 0x268, msTicks);
+// 			}
+// 			return LTC6804_WAITING;
+// 		case 10:
+// 			if (msTicks - owt_time > state->wait_time) {
+// 				uint8_t *normal_rx_ptr = state->rx_buf;
+// 				state->rx_buf = owt_up_rx_buf[0];
+// 				LTC6804_STATUS_T r;
+// 				r = _read(config, state, RDCVA, msTicks);
+// 				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+// 				for (i = 0; i < config->num_modules; i++) {
+// 					uint8_t *rx_ptr = owt_up_rx_buf[0] + 4 + 8 * i;
+// 					if (rx_ptr[0] == 0 && rx_ptr[1] == 0) {
+// 						state->rx_buf = normal_rx_ptr;
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // [TODO] Also return module and cell 0
+// 					} else {
+// 						// Chip_UART_SendBlocking(LPC_USART, "C[0], ", 6);
+// 					}
+// 					if (rx_ptr[0] == 0xFF || rx_ptr[1] == 0xFF) {
+// 						Chip_UART_SendBlocking(LPC_USART, "FUCK ", 5);
+// 					}
+// 				}
+// 				state->rx_buf = owt_up_rx_buf[1];
+// 				r = _read(config, state, RDCVB, msTicks);
+// 				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+// 				state->rx_buf = owt_up_rx_buf[2];
+// 				r = _read(config, state, RDCVC, msTicks);
+// 				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+// 				state->rx_buf = owt_up_rx_buf[3];
+// 				r = _read(config, state, RDCVD, msTicks);
+// 				if (r != LTC6804_PASS) {state->rx_buf = normal_rx_ptr; return r;}
+// 				state->rx_buf = normal_rx_ptr;
+// 				owt_state++;
+// 				owt_time = msTicks;
+// 				_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
+// 			}
+// 			return LTC6804_WAITING;
+// 		case 11:
+// 		case 12:
+// 		case 13:
+// 		case 14:
+// 		case 15:
+// 		case 16:
+// 		case 17:
+// 		case 18:
+// 		case 19:
+// 			if (msTicks - owt_time > state->wait_time) {
+// 				owt_state++;
+// 				owt_time = msTicks;
+// 				_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
+// 			}
+// 			return LTC6804_WAITING;
+// 		case 20:
+// 			if (msTicks - owt_time > state->wait_time) {
+// 				LTC6804_STATUS_T r;
+// 				uint8_t str[10];
+// 				int32_t c_up, c_down;
+// 				r = _read(config, state, RDCVA, msTicks);
+// 				if (r != LTC6804_PASS) {return r;}
+// 				for (i = 0; i < config->num_modules; i++) {
+// 					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
+// 					uint8_t *owt_ptr = owt_up_rx_buf[0] + 4 + 8 * i;
+// 					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
+// 					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
+// 					itoa(rx_ptr[2], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(rx_ptr[3], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(owt_ptr[2], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(owt_ptr[3], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(c_up - c_down, str, 10);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up -  c_down < -4000) {
+// 						//Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[1] Fail
+// 					} else {
+// 						//Chip_UART_SendBlocking(LPC_USART, " C[1], ", 6);
+// 					}
+// 					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
+// 					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
+// 					itoa(rx_ptr[4], str, 16);
+// //					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(rx_ptr[5], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(owt_ptr[4], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(owt_ptr[5], str, 16);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					//Chip_UART_SendBlocking(LPC_USART, " : ", 3);
+// 					itoa(c_up - c_down, str, 10);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up -  c_down < -4000) {
+// 						//Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[2] Fail
+// 					} else {
+// 						//////Chip_UART_SendBlocking(LPC_USART, " C[2], ", 6);
+// 					}
+// 				}
+// 				r = _read(config, state, RDCVB, msTicks);
+// 				if (r != LTC6804_PASS) {return r;}
+// 				for (i = 0; i < config->num_modules; i++) {
+// 					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
+// 					uint8_t *owt_ptr = owt_up_rx_buf[1] + 4 + 8 * i;
+// 					c_up = (owt_ptr[1] << 8) | owt_ptr[0];
+// 					c_down = (rx_ptr[1] << 8) | rx_ptr[0];
+// 					itoa(c_up - c_down, str, 10);
+// 					//////Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						//////Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[3] Fail
+// 					} else {
+// 						//////Chip_UART_SendBlocking(LPC_USART, " C[3], ", 6);
+// 					}
+// 					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
+// 					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
+// 					itoa(c_up - c_down, str, 10);
+// 					//////Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						//////Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[4] Fail
+// 					} else {
+// 						//////Chip_UART_SendBlocking(LPC_USART, " C[4], ", 6);
+// 					}
+// 					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
+// 					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
+// 					itoa(c_up - c_down, str, 10);
+// 					//////Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						//////Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[5] Fail
+// 					} else {
+// 						//////Chip_UART_SendBlocking(LPC_USART, " C[5], ", 6);
+// 					}
+// 				}
+// 				r = _read(config, state, RDCVC, msTicks);
+// 				if (r != LTC6804_PASS) {return r;}
+// 				for (i = 0; i < config->num_modules; i++) {
+// 					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
+// 					uint8_t *owt_ptr = owt_up_rx_buf[2] + 4 + 8 * i;
+// 					c_up = (owt_ptr[1] << 8) | owt_ptr[0];
+// 					c_down = (rx_ptr[1] << 8) | rx_ptr[0];
+// 					itoa(c_up - c_down, str, 10);
+// 					////Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up -  c_down < -4000) {
+// 						////Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[6] Fail
+// 					} else {
+// 						////Chip_UART_SendBlocking(LPC_USART, " C[6], ", 6);
+// 					}
+// 					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
+// 					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
+// 					itoa(c_up - c_down, str, 10);
+// 					////Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up -  c_down < -4000) {
+// 						////Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[7] Fail
+// 					} else {
+// 						////Chip_UART_SendBlocking(LPC_USART, " C[7], ", 6);
+// 					}
+// 					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
+// 					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
+// 					////itoa(c_up - c_down, str, 10);
+// 					Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						////Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[8] Fail
+// 					} else {
+// 						////Chip_UART_SendBlocking(LPC_USART, " C[8], ", 6);
+// 					}
+// 				}
+// 				r = _read(config, state, RDCVD, msTicks);
+// 				if (r != LTC6804_PASS) {return r;}
+// 				for (i = 0; i < config->num_modules; i++) {
+// 					uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
+// 					uint8_t *owt_ptr = owt_up_rx_buf[3] + 4 + 8 * i;
+// 					c_up = (owt_ptr[1] << 8) | owt_ptr[0];
+// 					c_down = (rx_ptr[1] << 8) | rx_ptr[0];
+// 					itoa(c_up - c_down, str, 10);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						//Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[9] Fail
+// 					}  else {
+// 						//Chip_UART_SendBlocking(LPC_USART, " C[9], ", 6);
+// 					}
+// 					c_up = (owt_ptr[3] << 8) | owt_ptr[2];
+// 					c_down = (rx_ptr[3] << 8) | rx_ptr[2];
+// 					itoa(c_up - c_down, str, 10);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						//Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[10] Fail
+// 					} else {
+// 						//Chip_UART_SendBlocking(LPC_USART, " C[10], ", 7);
+// 					}
+// 					c_up = (owt_ptr[5] << 8) | owt_ptr[4];
+// 					c_down = (rx_ptr[5] << 8) | rx_ptr[4];
+// 					itoa(c_up - c_down, str, 10);
+// 					//Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
+// 					if (c_up - c_down < -4000) {
+// 						//Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[11] Fail
+// 					} else {
+// 						//Chip_UART_SendBlocking(LPC_USART, " C[11], ", 7);
+// 					}
+// 					if (rx_ptr[5] == 0 && rx_ptr[4] == 0) {
+// 						//Chip_UART_SendBlocking(LPC_USART, ", ", 2);
+// 						owt_state = 0;
+// 						return LTC6804_FAIL; // C[12] Fail
+// 					} else {
+// 						//Chip_UART_SendBlocking(LPC_USART, " C[12]", 5);
+// 					}
+
+// 				}
+// 				owt_state = 0;
+// 				owt_time = msTicks;
+// 				return LTC6804_PASS;
+// 			}
+// 			return LTC6804_WAITING;
+// 		default:
+// 			return LTC6804_FAIL; // What happened here
+// 	}
+// }
 
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks) {
 	bool *bal_ptr = balance_req;
@@ -406,6 +528,7 @@ LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_S
 	}
 }
 
+// [TODO] Clear cell votlages and only return pass when recieving not all FF
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks) {
 	if (_IS_ASLEEP(state, msTicks)) {
 		_wake(config, state, msTicks, false);
@@ -417,7 +540,8 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 	if (!state->waiting) { // Need to send out self test command
 		state->waiting = true;
 		state->flight_time = msTicks;
-		_command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
+		// _command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
+		_command(config, state, (config->adc_mode << 7) | cmd, msTicks);
 		return LTC6804_WAITING;
 	} else {
 		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
