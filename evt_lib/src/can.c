@@ -123,7 +123,7 @@ CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	} else {
 		if (!RingBuffer_IsEmpty(&rx_buffer)) {
 			RingBuffer_Pop(&rx_buffer, user_buffer);
-			return NO_CAN_ERROR;
+            return NO_CAN_ERROR;
 		} else {
             return NO_RX_CAN_MESSAGE;
         }
