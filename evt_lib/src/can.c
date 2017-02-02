@@ -7,6 +7,8 @@
 CCAN_MSG_OBJ_T msg_obj;
 STATIC RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[CAN_BUF_SIZE];
+STATIC RINGBUFF_T tx_buffer;
+CCAN_MSG_OBJ_T _tx_buffer[CAN_BUF_SIZE];
 static bool can_error_flag;
 static uint32_t can_error_info;
 
@@ -42,6 +44,15 @@ void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
 		}
 	}
 }
+
+// TODO:
+//  - group into classes of similar error based on handling mechanism
+//      - page 289 in user manual
+//  - add transmit ring buffer, since sending on same msg channel
+//  - reset can peripheral in CAN error handler
+//      - https://github.com/MITEVT/lpc11cx4-library/blob/master/lpc_chip_11cxx_lib/inc/sysctl_11xx.h
+//  - error counter: 
+//      - page 290
 
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
     return can_error;
@@ -85,6 +96,9 @@ void CAN_Init(uint32_t baud_rate) {
 
 	RingBuffer_Init(&rx_buffer, _rx_buffer, sizeof(CCAN_MSG_OBJ_T), CAN_BUF_SIZE);
 	RingBuffer_Flush(&rx_buffer);
+
+	RingBuffer_Init(&tx_buffer, _tx_buffer, sizeof(CCAN_MSG_OBJ_T), CAN_BUF_SIZE);
+	RingBuffer_Flush(&tx_buffer);
 
 	uint32_t CanApiClkInitTable[2];
 	CCAN_CALLBACKS_T callbacks = {
