@@ -254,6 +254,7 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 		_command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
 		return LTC6804_WAITING;
 	} else {
+		// [TODO] make >=
 		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
 			state->waiting = false;
 			int i, j;
@@ -263,6 +264,8 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 			// Read a cell voltage group
 				// For each module, calculate head of module voltage group
 				// vol_ptr is pointer to head of module cell group voltages
+
+			// [TODO] Don't read if you don't need to (cell_module_count < 12);
 			LTC6804_STATUS_T r;
 			r = _read(config, state, RDCVA, msTicks);
 			if (r == LTC6804_SPI_ERROR || r == LTC6804_PEC_ERROR) return r;
