@@ -49,10 +49,13 @@ void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
 //  - group into classes of similar error based on handling mechanism
 //      - page 289 in user manual
 //  - add transmit ring buffer, since sending on same msg channel
+//      - check in flight CAN
+//          - page 302
 //  - reset can peripheral in CAN error handler
 //      - https://github.com/MITEVT/lpc11cx4-library/blob/master/lpc_chip_11cxx_lib/inc/sysctl_11xx.h
 //  - error counter: 
 //      - page 290
+//  - bug fix re: only recieving on can ID 600
 
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
     return can_error;
@@ -69,6 +72,10 @@ void CAN_rx(uint8_t msg_obj_num) {
 	/* Now load up the msg_obj structure with the CAN message */
 	LPC_CCAN_API->can_receive(&msg_obj);
 	RingBuffer_Insert(&rx_buffer, &msg_obj);
+}
+
+void CAN_CheckTXBusy(void) {
+
 }
 
 /*	CAN transmit callback */
