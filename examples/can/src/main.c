@@ -56,11 +56,14 @@ static void Print_Buffer(uint8_t* buff, uint8_t buff_size) {
 int main(void) {
 	SystemCoreClockUpdate();
 
+    uint32_t reset_can_peripheral_time;
+    const uint32_t can_error_delay = 5000;
+    bool reset_can_peripheral = false;
+
 	if (SysTick_Config (SystemCoreClock / 1000)) {
 		//Error
 		while(1);
 	}
-
 
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_6, (IOCON_FUNC1 | IOCON_MODE_INACT)); /* RXD */
 	Chip_IOCON_PinMuxSet(LPC_IOCON, IOCON_PIO1_7, (IOCON_FUNC1 | IOCON_MODE_INACT)); /* TXD */
@@ -81,6 +84,14 @@ int main(void) {
 		uint8_t count;
 		uint8_t data[1];
 
+        if(reset_can_peripheral && msTicks > reset_can_peripheral_time) {
+            DEBUG_Print("Attempting to reset CAN peripheral...\r\n ");
+            CAN_ResetPeripheral();
+            CAN_Init(500000);
+            DEBUG_Print("Reset CAN peripheral. \r\n ");
+            reset_can_peripheral = false;
+        }
+
 		if (msTicks % 1000 == 0){
             // recieve message if there is a message
 		    ret = CAN_Receive(&rx_msg);
@@ -98,6 +109,13 @@ int main(void) {
                 itoa(ret, str, 2);
                 DEBUG_Print(str);
                 DEBUG_Print("\r\n");
+
+                DEBUG_Print("Will attempt to reset peripheral in ");
+                itoa(can_error_delay/1000, str, 10);
+                DEBUG_Print(str);
+                DEBUG_Print(" seconds.\r\n");
+                reset_can_peripheral = true;
+                reset_can_peripheral_time = msTicks + can_error_delay;
             }
 
             // transmit a message!

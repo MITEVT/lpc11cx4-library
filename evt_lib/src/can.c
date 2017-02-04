@@ -20,6 +20,7 @@ void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg);
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error);
 void prepare_tx_msg_obj(uint32_t msg_id, uint8_t* data, uint8_t data_len, CCAN_MSG_OBJ_T* msgobj);
 
+
 /*************************************************
  *                  HELPERS
  * ************************************************/
@@ -64,6 +65,8 @@ bool CAN_IsTxBusy(void) {
     // page 302 in the user manual
     return ((LPC_CCAN->CANTXREQ1 & 0x00000002) >> 1) == 1;
 }
+
+// TODO SAVE CURRENT IN FLIGHT MESSAGE SO THAT ON RESET ANY IN FLIGHT MESSAGES CAN BE RE-SENT
 
 void CAN_ResetPeripheral(void) {
     Chip_SYSCTL_PeriphReset(RESET_CAN0);
