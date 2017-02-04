@@ -1,5 +1,3 @@
-
-
 #include "chip.h"
 #include "util.h"
 #include <string.h>
@@ -104,7 +102,7 @@ int main(void) {
 
             // transmit a message!
 		    data[0] = 0xAA;
-		    CAN_Transmit(data, 0x600);
+		    CAN_Transmit(0x600, data, 1);
 		}
         
 		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
@@ -112,7 +110,7 @@ int main(void) {
 				case 'a':
 					DEBUG_Print("Sending CAN with ID: 0x600\r\n");
 					data[0] = 0xAA;
-					ret = CAN_Transmit(data, 0x600);
+					ret = CAN_Transmit(0x600, data, 1);
                     if(ret != NO_CAN_ERROR) {
                         DEBUG_Print("CAN Error: ");
 					    itoa(ret, str, 2);

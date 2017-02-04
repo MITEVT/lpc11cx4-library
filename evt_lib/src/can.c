@@ -5,15 +5,20 @@
 #define CAN_BUF_SIZE 8
 
 CCAN_MSG_OBJ_T msg_obj;
-STATIC RINGBUFF_T rx_buffer;
+static RINGBUFF_T rx_buffer;
 CCAN_MSG_OBJ_T _rx_buffer[CAN_BUF_SIZE];
-STATIC RINGBUFF_T tx_buffer;
+
+static RINGBUFF_T tx_buffer;
 CCAN_MSG_OBJ_T _tx_buffer[CAN_BUF_SIZE];
+CCAN_MSG_OBJ_T tmp_msg_obj; // temporarily store data/CAN ID to insert into tx_buf
+
 static bool can_error_flag;
 static uint32_t can_error_info;
 
+bool CAN_IsTxBusy(void);
 void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg);
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error);
+void prepare_tx_msg_obj(uint32_t msg_id, uint8_t* data, uint8_t data_len, CCAN_MSG_OBJ_T* msgobj);
 
 /*************************************************
  *                  HELPERS
@@ -45,17 +50,24 @@ void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
 	}
 }
 
-// TODO:
-//  - group into classes of similar error based on handling mechanism
-//      - page 289 in user manual
-//  - add transmit ring buffer, since sending on same msg channel
-//      - check in flight CAN
-//          - page 302
-//  - reset can peripheral in CAN error handler
-//      - https://github.com/MITEVT/lpc11cx4-library/blob/master/lpc_chip_11cxx_lib/inc/sysctl_11xx.h
-//  - error counter: 
-//      - page 290
-//  - bug fix re: only recieving on can ID 600
+uint8_t CAN_GetTxErrorCount(void) {
+    // page 290 in the user manual
+    return LPC_CCAN->CANEC & 0x000000FF;
+}
+
+uint8_t CAN_GetRxErrorCount(void) {
+    // page 290 in the user manual
+    return (LPC_CCAN->CANEC & 0x00007F00) >> 8;
+}
+
+bool CAN_IsTxBusy(void) {
+    // page 302 in the user manual
+    return ((LPC_CCAN->CANTXREQ1 & 0x00000002) >> 1) == 1;
+}
+
+void CAN_ResetPeripheral(void) {
+    Chip_SYSCTL_PeriphReset(RESET_CAN0);
+}
 
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
     return can_error;
@@ -74,13 +86,13 @@ void CAN_rx(uint8_t msg_obj_num) {
 	RingBuffer_Insert(&rx_buffer, &msg_obj);
 }
 
-void CAN_CheckTXBusy(void) {
-
-}
-
 /*	CAN transmit callback */
 void CAN_tx(uint8_t msg_obj_num) {
 	UNUSED(msg_obj_num);
+    if(!RingBuffer_IsEmpty(&tx_buffer)) {
+		RingBuffer_Pop(&tx_buffer, &msg_obj);
+        LPC_CCAN_API->can_transmit(&msg_obj);
+    } 
 }
 
 /*	CAN error callback */
@@ -128,7 +140,7 @@ void CAN_Init(uint32_t baud_rate) {
 
 	/* Configure message object 1 to only ID 0x600 */
 	msg_obj.msgobj = 1;
-	msg_obj.mode_id = 0x600;
+	msg_obj.mode_id = 0xFFF;
     // ANDs the mask with the input ID and checks if == to mode_id
 	msg_obj.mask = 0x000; 
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
@@ -151,20 +163,30 @@ CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	}
 }
 
-CAN_ERROR_T CAN_Transmit(uint8_t* data, uint32_t msg_id) {
+void prepare_tx_msg_obj(uint32_t msg_id, uint8_t* data, uint8_t data_len, CCAN_MSG_OBJ_T* m_obj) {
+    m_obj->msgobj = 2;
+    m_obj->mode_id = msg_id;
+    m_obj->dlc = data_len;
+    uint8_t i;
+    for (i = 0; i < m_obj->dlc; i++) {	
+        m_obj->data[i] = data[i];
+    }
+}
+
+CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len) {
 	if (can_error_flag) {
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
 	} else {
-		msg_obj.msgobj = 2;
-		msg_obj.mode_id = msg_id;
-		msg_obj.dlc = sizeof(data) / sizeof(uint8_t);
-		uint8_t i;
-		for (i = 0; i < msg_obj.dlc; i++) {	
-			msg_obj.data[i] = data[i];
-		}
-		LPC_CCAN_API->can_transmit(&msg_obj);
-		return NO_CAN_ERROR;
+        bool busy = CAN_IsTxBusy();
+        if(busy) {
+            prepare_tx_msg_obj(msg_id, data, data_len, &tmp_msg_obj);
+	        RingBuffer_Insert(&tx_buffer, &tmp_msg_obj);
+        } else {
+            prepare_tx_msg_obj(msg_id, data, data_len, &msg_obj);
+            LPC_CCAN_API->can_transmit(&msg_obj);
+        }
+        return NO_CAN_ERROR;
 	}
 }
 
