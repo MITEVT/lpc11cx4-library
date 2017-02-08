@@ -1,4 +1,4 @@
-update=Wednesday, February 01, 2017 'AMt' 01:16:53 AM
+update=Tuesday, February 07, 2017 'PMt' 08:47:25 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -58,4 +58,8 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-LibName30=/Users/eaponce/Documents/EVT_KICAD_LIBS/MITEVT_mcontrollers
+LibName30=MITEVT_mcontrollers
+LibName31=MITEVT_OPTO
+LibName32=MITEVT_ANALOG
+LibName33=MITEVT_power
+LibName34=MITEVT_REG
