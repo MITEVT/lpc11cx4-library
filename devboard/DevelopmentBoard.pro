@@ -1,4 +1,4 @@
-update=Tuesday, February 07, 2017 'PMt' 08:47:25 PM
+update=Tuesday, February 07, 2017 'PMt' 11:37:28 PM
 version=1
 last_client=kicad
 [pcbnew]
@@ -63,3 +63,13 @@ LibName31=MITEVT_OPTO
 LibName32=MITEVT_ANALOG
 LibName33=MITEVT_power
 LibName34=MITEVT_REG
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=60
