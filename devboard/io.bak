@@ -740,7 +740,7 @@ $EndComp
 Wire Wire Line
 	4300 6800 4150 6800
 Wire Wire Line
-	4800 6900 4950 6900
+	4800 6900 5400 6900
 Wire Wire Line
 	4800 6800 4950 6800
 Wire Wire Line
@@ -751,7 +751,7 @@ Wire Wire Line
 	4150 6900 4150 7050
 Text HLabel 4150 6800 0    60   BiDi ~ 0
 LPC_SCL
-Text HLabel 4950 6900 2    60   BiDi ~ 0
+Text HLabel 5400 6900 2    60   BiDi ~ 0
 LPC_SDA
 $Comp
 L +5V #PWR?
@@ -775,4 +775,60 @@ F 3 "" H 4150 7050 50  0000 C CNN
 	1    4150 7050
 	1    0    0    -1  
 $EndComp
+$Comp
+L R R?
+U 1 1 589B0F98
+P 4250 6550
+F 0 "R?" V 4330 6550 50  0000 C CNN
+F 1 "1k" V 4250 6550 50  0000 C CNN
+F 2 "" V 4180 6550 50  0000 C CNN
+F 3 "" H 4250 6550 50  0000 C CNN
+	1    4250 6550
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R?
+U 1 1 589B1021
+P 5250 6650
+F 0 "R?" V 5330 6650 50  0000 C CNN
+F 1 "1k" V 5250 6650 50  0000 C CNN
+F 2 "" V 5180 6650 50  0000 C CNN
+F 3 "" H 5250 6650 50  0000 C CNN
+	1    5250 6650
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4250 6700 4250 6800
+Connection ~ 4250 6800
+Wire Wire Line
+	4250 6400 4250 6350
+$Comp
+L +3.3V #PWR?
+U 1 1 589B11DA
+P 4250 6350
+F 0 "#PWR?" H 4250 6200 50  0001 C CNN
+F 1 "+3.3V" H 4250 6490 50  0000 C CNN
+F 2 "" H 4250 6350 50  0000 C CNN
+F 3 "" H 4250 6350 50  0000 C CNN
+	1    4250 6350
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 6900 5250 6800
+Connection ~ 5250 6900
+Wire Wire Line
+	5250 6500 5250 6450
+$Comp
+L +3.3V #PWR?
+U 1 1 589B1410
+P 5250 6450
+F 0 "#PWR?" H 5250 6300 50  0001 C CNN
+F 1 "+3.3V" H 5250 6590 50  0000 C CNN
+F 2 "" H 5250 6450 50  0000 C CNN
+F 3 "" H 5250 6450 50  0000 C CNN
+	1    5250 6450
+	1    0    0    -1  
+$EndComp
+Text Notes 2750 6600 0    60   ~ 0
+Optional Pull-up Resistors
 $EndSCHEMATC
