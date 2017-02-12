@@ -9,10 +9,10 @@ void Brusa_MakeCTL(NLG5_CTL_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	uint16_t mains_dAmps = contents->max_mains_cAmps / 10;
 	msg_obj->data[1] = mains_dAmps >> 8;
 	msg_obj->data[2] = mains_dAmps & 0xFF;
-	uint16_t out_dVolts = contents->output_mVolts / 100;
+	uint16_t out_dVolts = contents->output_mV / 100;
 	msg_obj->data[3] = out_dVolts >> 8;
 	msg_obj->data[4] = out_dVolts & 0xFF;
-	uint16_t out_dAmps = contents->output_cAmps / 10;
+	uint16_t out_dAmps = contents->output_cA / 10;
 	msg_obj->data[5] = out_dAmps >> 8;
 	msg_obj->data[6] = out_dAmps & 0xFF;
 }

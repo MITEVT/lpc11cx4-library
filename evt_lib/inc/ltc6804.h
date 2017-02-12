@@ -80,6 +80,10 @@ typedef enum {
 	LTC6804_ADC_MODE_FAST = 1, LTC6804_ADC_MODE_NORMAL = 2, LTC6804_ADC_MODE_SLOW = 3
 } LTC6804_ADC_MODE_T;
 
+typedef enum {
+	LTC6804_ADC_NONE, LTC6804_ADC_GCV, LTC6804_ADC_OWT, LTC6804_ADC_CVST
+} LTC6804_ADC_STATUS_T;
+
 static const uint8_t LTC6804_ADC_MODE_WAIT_TIMES[] = {
 	0, 2, 4, 202
 };
@@ -118,6 +122,8 @@ typedef struct {
 
 	bool balancing;
 	uint16_t *bal_list;
+
+	LTC6804_ADC_STATUS_T adc_status;
 } LTC6804_STATE_T;
 
 typedef enum {

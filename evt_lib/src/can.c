@@ -193,6 +193,21 @@ CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len) {
 	}
 }
 
+CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
+	if (can_error_flag) {
+		can_error_flag = false;
+		return Convert_To_CAN_Error(can_error_info);
+	} else {
+        bool busy = CAN_IsTxBusy();
+        if(busy) {
+	        RingBuffer_Insert(&tx_buffer, msg_obj);
+        } else {
+            LPC_CCAN_API->can_transmit(msg_obj);
+        }
+        return NO_CAN_ERROR;
+	}
+}
+
 CAN_ERROR_T CAN_GetErrorStatus(void) {
 	return Convert_To_CAN_Error(can_error_info);
 }

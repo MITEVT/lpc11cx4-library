@@ -22,8 +22,8 @@ typedef struct {
 	uint8_t clear_error;			// 0->1 = Clear error latch
 	uint8_t ventilation_request;	// 0 = No Ventilation, 1 = Ventilation
 	uint16_t max_mains_cAmps;
-	uint32_t output_mVolts;
-	uint16_t output_cAmps;
+	uint32_t output_mV;
+	uint16_t output_cA;
 } NLG5_CTL_T;
 
 

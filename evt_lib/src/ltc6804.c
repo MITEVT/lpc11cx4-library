@@ -8,7 +8,7 @@
 static uint8_t wake_buf[WAKE_BUF_LEN];
 static uint16_t owt_state;
 static uint32_t owt_time;
-static uint8_t owt_up_rx_buf[4][LTC6804_CALC_BUFFER_LEN(15)]; 
+static uint8_t owt_up_rx_buf[4][LTC6804_CALC_BUFFER_LEN(15)]; // [TODO] Move into ltc6804_state
 
 #define _IS_ASLEEP(state, msTicks) (msTicks - state->last_message > T_SLEEP)
 #define _IS_IDLE(state, msTicks) (msTicks - state->last_message > T_IDLE)
@@ -36,7 +36,6 @@ uint32_t divu10(uint32_t n) {
  q = q >> 3;
  r = n - q*10;
  return q + ((r + 6) >> 4);
-// return q + (r > 9);
 }
 
 /***************************************
@@ -71,6 +70,8 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	// state->wait_time = 7; // [TODO] Remove
 	state->last_sleep_wake = msTicks;
 	state->balancing = false;
+
+	state->adc_status = LTC6804_ADC_NONE;
 
 	owt_state = 0;
 
@@ -113,6 +114,12 @@ bool LTC6804_VerifyCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_
 }
 
 LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
+	if (state->adc_status == LTC6804_ADC_NONE) {
+		state->adc_status = LTC6804_ADC_CVST;
+	} else if (state->adc_status != LTC6804_ADC_CVST) {
+		return LTC6804_WAITING;
+	}
+
 	if (_IS_ASLEEP(state, msTicks)) {
 		_wake(config, state, msTicks, false);
 		return LTC6804_WAITING;
@@ -128,6 +135,7 @@ LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	} else {
 		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
 			state->waiting = false;
+			state->adc_status = LTC6804_ADC_NONE;
 			LTC6804_STATUS_T res;
 			if ((res = _read(config, state, RDCVA, msTicks)) != LTC6804_PASS) return res;
 			if (!_check_st_results(config, state)) return LTC6804_FAIL;
@@ -146,10 +154,14 @@ LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 
 #define LENGTH 35 // [TODO] Put in config
 
-// [TODO] Prevent ADC from running when OWT
 // [TODO] Don't break at module fail (cycle through all modules)
-// [TODO] 
 LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_OWT_RES_T *res, uint32_t msTicks) {
+
+	if (state->adc_status == LTC6804_ADC_NONE) {
+		state->adc_status = LTC6804_ADC_OWT;
+	} else if (state->adc_status != LTC6804_ADC_OWT) {
+		return LTC6804_WAITING;
+	}
 
 	int i;
 
@@ -198,6 +210,7 @@ LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T 
 		_command(config, state, (config->adc_mode << 7) | 0x228, msTicks);
 		return LTC6804_WAITING;
 	} else if (owt_state == LENGTH*2 + 1) {
+		state->adc_status = LTC6804_ADC_NONE;
 		LTC6804_STATUS_T r;
 		for (i = 0; i < 4; i++) {
 			r = _read(config, state, RDCVA+2*i, msTicks);
@@ -253,6 +266,12 @@ LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_S
 
 // [TODO] Clear cell votlages and only return pass when recieving not all FF
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks) {
+	if (state->adc_status == LTC6804_ADC_NONE) {
+		state->adc_status = LTC6804_ADC_GCV;
+	} else if (state->adc_status != LTC6804_ADC_GCV) {
+		return LTC6804_WAITING;
+	}
+
 	if (_IS_ASLEEP(state, msTicks)) {
 		_wake(config, state, msTicks, false);
 		return LTC6804_WAITING;
@@ -273,18 +292,19 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 			uint32_t *vol_ptr = res->cell_voltages_mV;
 			uint32_t min = UINT32_MAX;
 			uint32_t max = 0;
+			uint16_t failed_read = 0xFFFF;
 			// Read a cell voltage group
 				// For each module, calculate head of module voltage group
 				// vol_ptr is pointer to head of module cell group voltages
-
-			// [TODO] Don't read if you don't need to (cell_module_count < 12);
 			LTC6804_STATUS_T r;
 			r = _read(config, state, RDCVA, msTicks);
 			if (r == LTC6804_SPI_ERROR || r == LTC6804_PEC_ERROR) return r;
 			for (i = 0; i < config->num_modules; i++) {
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j < config->module_cell_count[i] && j < 3; j++) {
-					vol_ptr[j] = divu10((rx_ptr[2*j + 1] << 8 | rx_ptr[2*j]));
+					uint16_t vol = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]);
+					failed_read &= vol;
+					vol_ptr[j] = divu10(vol);
 					max = (vol_ptr[j] > max) ? vol_ptr[j] : max;
 					min = (vol_ptr[j] < min) ? vol_ptr[j] : min;
 				}
@@ -297,7 +317,9 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 			for (i = 0; i < config->num_modules; i++) {
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j + 3 < config->module_cell_count[i] && j < 3; j++) {
-					vol_ptr[j + 3] = divu10((rx_ptr[2 * j + 1] << 8 | rx_ptr[2* j]));
+					uint16_t vol = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]);
+					failed_read &= vol;
+					vol_ptr[j + 3] = divu10(vol);
 					max = (vol_ptr[j + 3] > max) ? vol_ptr[j + 3] : max;
 					min = (vol_ptr[j + 3] < min) ? vol_ptr[j + 3] : min;
 				} 
@@ -310,7 +332,9 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 			for (i = 0; i < config->num_modules; i++) {
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j + 6 < config->module_cell_count[i] && j < 3; j++) {
-					vol_ptr[j + 6] = divu10((rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]));
+					uint16_t vol = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]);
+					failed_read &= vol;
+					vol_ptr[j + 6] = divu10(vol);
 					max = (vol_ptr[j + 6] > max) ? vol_ptr[j + 6] : max;
 					min = (vol_ptr[j + 6] < min) ? vol_ptr[j + 6] : min;
 				} 
@@ -323,11 +347,19 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 			for (i = 0; i < config->num_modules; i++) {
 				uint8_t *rx_ptr = state->rx_buf + 4 + 8 * i;
 				for (j = 0; j + 9 < config->module_cell_count[i] && j < 3; j++) {
-					vol_ptr[j + 9] = divu10((rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]));
+					uint16_t vol = (rx_ptr[2 * j + 1] << 8 | rx_ptr[2 * j]);
+					failed_read &= vol;
+					vol_ptr[j + 9] = divu10(vol);
 					max = (vol_ptr[j + 9] > max) ? vol_ptr[j + 9] : max;
 					min = (vol_ptr[j + 9] < min) ? vol_ptr[j + 9] : min;
 				} 
 				vol_ptr = vol_ptr + config->module_cell_count[i];
+			}
+
+			state->adc_status = LTC6804_ADC_NONE;
+
+			if (failed_read == 0xFFFF) {
+				return LTC6804_FAIL;
 			}
 
 			res->pack_cell_max_mV = max;
@@ -458,29 +490,31 @@ LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *
 	return _write(config, state, WRCFG, msTicks);
 }
 
-static const unsigned int crc15Table[256] = {0x0,0xc599, 0xceab, 0xb32, 0xd8cf, 0x1d56, 0x1664, 0xd3fd, 0xf407, 0x319e, 0x3aac,  //!<precomputed CRC15 Table
-0xff35, 0x2cc8, 0xe951, 0xe263, 0x27fa, 0xad97, 0x680e, 0x633c, 0xa6a5, 0x7558, 0xb0c1, 
-0xbbf3, 0x7e6a, 0x5990, 0x9c09, 0x973b, 0x52a2, 0x815f, 0x44c6, 0x4ff4, 0x8a6d, 0x5b2e,
-0x9eb7, 0x9585, 0x501c, 0x83e1, 0x4678, 0x4d4a, 0x88d3, 0xaf29, 0x6ab0, 0x6182, 0xa41b,
-0x77e6, 0xb27f, 0xb94d, 0x7cd4, 0xf6b9, 0x3320, 0x3812, 0xfd8b, 0x2e76, 0xebef, 0xe0dd, 
-0x2544, 0x2be, 0xc727, 0xcc15, 0x98c, 0xda71, 0x1fe8, 0x14da, 0xd143, 0xf3c5, 0x365c, 
-0x3d6e, 0xf8f7,0x2b0a, 0xee93, 0xe5a1, 0x2038, 0x7c2, 0xc25b, 0xc969, 0xcf0, 0xdf0d, 
-0x1a94, 0x11a6, 0xd43f, 0x5e52, 0x9bcb, 0x90f9, 0x5560, 0x869d, 0x4304, 0x4836, 0x8daf,
-0xaa55, 0x6fcc, 0x64fe, 0xa167, 0x729a, 0xb703, 0xbc31, 0x79a8, 0xa8eb, 0x6d72, 0x6640,
-0xa3d9, 0x7024, 0xb5bd, 0xbe8f, 0x7b16, 0x5cec, 0x9975, 0x9247, 0x57de, 0x8423, 0x41ba,
-0x4a88, 0x8f11, 0x57c, 0xc0e5, 0xcbd7, 0xe4e, 0xddb3, 0x182a, 0x1318, 0xd681, 0xf17b, 
-0x34e2, 0x3fd0, 0xfa49, 0x29b4, 0xec2d, 0xe71f, 0x2286, 0xa213, 0x678a, 0x6cb8, 0xa921, 
-0x7adc, 0xbf45, 0xb477, 0x71ee, 0x5614, 0x938d, 0x98bf, 0x5d26, 0x8edb, 0x4b42, 0x4070, 
-0x85e9, 0xf84, 0xca1d, 0xc12f, 0x4b6, 0xd74b, 0x12d2, 0x19e0, 0xdc79, 0xfb83, 0x3e1a, 0x3528, 
-0xf0b1, 0x234c, 0xe6d5, 0xede7, 0x287e, 0xf93d, 0x3ca4, 0x3796, 0xf20f, 0x21f2, 0xe46b, 0xef59, 
-0x2ac0, 0xd3a, 0xc8a3, 0xc391, 0x608, 0xd5f5, 0x106c, 0x1b5e, 0xdec7, 0x54aa, 0x9133, 0x9a01, 
-0x5f98, 0x8c65, 0x49fc, 0x42ce, 0x8757, 0xa0ad, 0x6534, 0x6e06, 0xab9f, 0x7862, 0xbdfb, 0xb6c9, 
-0x7350, 0x51d6, 0x944f, 0x9f7d, 0x5ae4, 0x8919, 0x4c80, 0x47b2, 0x822b, 0xa5d1, 0x6048, 0x6b7a, 
-0xaee3, 0x7d1e, 0xb887, 0xb3b5, 0x762c, 0xfc41, 0x39d8, 0x32ea, 0xf773, 0x248e, 0xe117, 0xea25, 
-0x2fbc, 0x846, 0xcddf, 0xc6ed, 0x374, 0xd089, 0x1510, 0x1e22, 0xdbbb, 0xaf8, 0xcf61, 0xc453, 
-0x1ca, 0xd237, 0x17ae, 0x1c9c, 0xd905, 0xfeff, 0x3b66, 0x3054, 0xf5cd, 0x2630, 0xe3a9, 0xe89b, 
-0x2d02, 0xa76f, 0x62f6, 0x69c4, 0xac5d, 0x7fa0, 0xba39, 0xb10b, 0x7492, 0x5368, 0x96f1, 0x9dc3, 
-0x585a, 0x8ba7, 0x4e3e, 0x450c, 0x8095}; 
+static const unsigned int crc15Table[256] = {
+	0x0000, 0xc599, 0xceab, 0xb32, 0xd8cf, 0x1d56, 0x1664, 0xd3fd, 0xf407, 0x319e, 0x3aac,  //!<precomputed CRC15 Table
+	0xff35, 0x2cc8, 0xe951, 0xe263, 0x27fa, 0xad97, 0x680e, 0x633c, 0xa6a5, 0x7558, 0xb0c1, 
+	0xbbf3, 0x7e6a, 0x5990, 0x9c09, 0x973b, 0x52a2, 0x815f, 0x44c6, 0x4ff4, 0x8a6d, 0x5b2e,
+	0x9eb7, 0x9585, 0x501c, 0x83e1, 0x4678, 0x4d4a, 0x88d3, 0xaf29, 0x6ab0, 0x6182, 0xa41b,
+	0x77e6, 0xb27f, 0xb94d, 0x7cd4, 0xf6b9, 0x3320, 0x3812, 0xfd8b, 0x2e76, 0xebef, 0xe0dd, 
+	0x2544, 0x2be, 0xc727, 0xcc15, 0x98c, 0xda71, 0x1fe8, 0x14da, 0xd143, 0xf3c5, 0x365c, 
+	0x3d6e, 0xf8f7,0x2b0a, 0xee93, 0xe5a1, 0x2038, 0x7c2, 0xc25b, 0xc969, 0xcf0, 0xdf0d, 
+	0x1a94, 0x11a6, 0xd43f, 0x5e52, 0x9bcb, 0x90f9, 0x5560, 0x869d, 0x4304, 0x4836, 0x8daf,
+	0xaa55, 0x6fcc, 0x64fe, 0xa167, 0x729a, 0xb703, 0xbc31, 0x79a8, 0xa8eb, 0x6d72, 0x6640,
+	0xa3d9, 0x7024, 0xb5bd, 0xbe8f, 0x7b16, 0x5cec, 0x9975, 0x9247, 0x57de, 0x8423, 0x41ba,
+	0x4a88, 0x8f11, 0x57c, 0xc0e5, 0xcbd7, 0xe4e, 0xddb3, 0x182a, 0x1318, 0xd681, 0xf17b, 
+	0x34e2, 0x3fd0, 0xfa49, 0x29b4, 0xec2d, 0xe71f, 0x2286, 0xa213, 0x678a, 0x6cb8, 0xa921, 
+	0x7adc, 0xbf45, 0xb477, 0x71ee, 0x5614, 0x938d, 0x98bf, 0x5d26, 0x8edb, 0x4b42, 0x4070, 
+	0x85e9, 0xf84, 0xca1d, 0xc12f, 0x4b6, 0xd74b, 0x12d2, 0x19e0, 0xdc79, 0xfb83, 0x3e1a, 0x3528, 
+	0xf0b1, 0x234c, 0xe6d5, 0xede7, 0x287e, 0xf93d, 0x3ca4, 0x3796, 0xf20f, 0x21f2, 0xe46b, 0xef59, 
+	0x2ac0, 0xd3a, 0xc8a3, 0xc391, 0x608, 0xd5f5, 0x106c, 0x1b5e, 0xdec7, 0x54aa, 0x9133, 0x9a01, 
+	0x5f98, 0x8c65, 0x49fc, 0x42ce, 0x8757, 0xa0ad, 0x6534, 0x6e06, 0xab9f, 0x7862, 0xbdfb, 0xb6c9, 
+	0x7350, 0x51d6, 0x944f, 0x9f7d, 0x5ae4, 0x8919, 0x4c80, 0x47b2, 0x822b, 0xa5d1, 0x6048, 0x6b7a, 
+	0xaee3, 0x7d1e, 0xb887, 0xb3b5, 0x762c, 0xfc41, 0x39d8, 0x32ea, 0xf773, 0x248e, 0xe117, 0xea25, 
+	0x2fbc, 0x846, 0xcddf, 0xc6ed, 0x374, 0xd089, 0x1510, 0x1e22, 0xdbbb, 0xaf8, 0xcf61, 0xc453, 
+	0x1ca, 0xd237, 0x17ae, 0x1c9c, 0xd905, 0xfeff, 0x3b66, 0x3054, 0xf5cd, 0x2630, 0xe3a9, 0xe89b, 
+	0x2d02, 0xa76f, 0x62f6, 0x69c4, 0xac5d, 0x7fa0, 0xba39, 0xb10b, 0x7492, 0x5368, 0x96f1, 0x9dc3, 
+	0x585a, 0x8ba7, 0x4e3e, 0x450c, 0x8095
+}; 
 
 uint16_t _calculate_pec(uint8_t *data, uint8_t len) {
 	uint16_t remainder,addr;
@@ -493,40 +527,6 @@ uint16_t _calculate_pec(uint8_t *data, uint8_t len) {
 		remainder = (remainder<<8)^crc15Table[addr];
 	}
 	return(remainder*2);//The CRC15 has a 0 in the LSB so the remainder must be multiplied by 2
-	// int i,j;
-	// uint16_t pec = 0x0010;
-
-	// for (i = 0; i < len; i++) {
-	// 	for (j = 0; j < 8; j++) {
-	// 		uint16_t din = data[i] >> (7-j) & 1;
-	// 		uint16_t in0 = din ^ (pec >> 14 & 1); 				//in0 = din ^ pec[14]
-	// 		uint16_t in3 = ((in0 << 2) ^ (pec & 0x0004)) << 1;	//in3 = in0 ^ pec[2]
-	// 		uint16_t in4 = ((in0 << 3) ^ (pec & 0x0008)) << 1;	//in4 = in0 ^ pec[3]
-	// 		uint16_t in7 = ((in0 << 6) ^ (pec & 0x0040)) << 1;	//in7 = in0 & pec[6]
-	// 		uint16_t in8 = ((in0 << 7) ^ (pec & 0x0080)) << 1;	//in8 = in0 & pec[7];
-	// 		uint16_t in10 = ((in0 << 9) ^ (pec & 0x0200)) << 1;	//in10 = in0 ^ pec[9]
-	// 		uint16_t in14 = ((in0 << 13) ^ (pec & 0x2000)) << 1; //in14 = in0 ^ pec[13];
-			
-	// 		pec = (pec & ~0x4000) + in14;					//pec14 = in14
-	// 		pec = (pec & ~0x2000) + ((pec & 0x1000) << 1);	//pec13 = pec12
-	// 		pec = (pec & ~0x1000) + ((pec & 0x0800) << 1);	//pec12 = pec11
-	// 		pec = (pec & ~0x0800) + ((pec & 0x0400) << 1);	//pec11 = pec10
-	// 		pec = (pec & ~0x0400) + in10;					//pec10 = in10
-	// 		pec = (pec & ~0x0200) + ((pec & 0x0100) << 1);	//pec9 = pec8
-	// 		pec = (pec & ~0x0100) + in8;					//pec8 = in8
-	// 		pec = (pec & ~0x0080) + in7;					//pec7 = in7
-	// 		pec = (pec & ~0x0040) + ((pec & 0x0020) << 1);	//pec6 = pec5
-	// 		pec = (pec & ~0x0020) + ((pec & 0x0010) << 1);	//pec5 = pec4
-	// 		pec = (pec & ~0x0010) + in4;					//pec4 = in4;
-	// 		pec = (pec & ~0x0008) + in3; 					//pec3 = in3
-	// 		pec = (pec & ~0x0004) + ((pec & 0x0002) << 1); 	//pec2 = pec1
-	// 		pec = (pec & ~0x0002) + ((pec & 0x0001) << 1); 	//pec1 = pec0
-	// 		pec = (pec & ~0x0001) + in0; 					//pec0 = in0
-	// 	}
-		
-	// }
-
-	// return pec << 1;
 }
 
 bool _check_st_results(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state) {
