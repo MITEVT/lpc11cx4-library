@@ -1,3 +1,4 @@
+#ifndef _LEGACY_
 #include "chip.h"
 #include <string.h>
 #include "can.h"
@@ -212,3 +213,4 @@ CAN_ERROR_T CAN_GetErrorStatus(void) {
 	return Convert_To_CAN_Error(can_error_info);
 }
 
+#endif

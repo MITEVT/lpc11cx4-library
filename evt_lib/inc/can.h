@@ -1,3 +1,4 @@
+#ifndef _LEGACY_
 #ifndef _CAN_H_
 #define _CAN_H_
 
@@ -17,4 +18,5 @@ uint8_t CAN_GetRxErrorCount(void);
 bool CAN_IsTXBusy(void);
 void CAN_ResetPeripheral(void);
 
+#endif
 #endif
