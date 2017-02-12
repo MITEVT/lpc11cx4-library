@@ -141,6 +141,9 @@ typedef uint32_t NLG5_ERR_T;
 
 int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj);
 
+// Returns true if no errors
+bool Brusa_CheckErr(CCAN_MSG_OBJ_T *msg_obj);
+
 
 typedef struct {
 	NLG5_STATUS_T *stat;

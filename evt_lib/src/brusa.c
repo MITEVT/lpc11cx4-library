@@ -92,6 +92,20 @@ int Brusa_DecodeErr(NLG5_ERR_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	return 0;
 }
 
+bool Brusa_CheckErr(CCAN_MSG_OBJ_T *msg_obj) {
+	if (msg_obj->dlc != NLG5_ERR_DLC) {
+		return -1;
+	}
+
+	uint8_t mask = 0;
+	uint8_t i;
+	for (i = 0; i < msg_obj->mode_id; i++) {
+		mask |= msg_obj->data[i];
+	}
+
+	return (!mask);
+}
+
 /**
  * @details Takes a CAN messege object and determines if it is a valid Brusa message.
  * If so, it stuffs it into the appropriate static struct
