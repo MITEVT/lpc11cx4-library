@@ -1,0 +1,5 @@
+(fp_lib_table
+  (lib (name MITEVT_LOGO)(type KiCad)(uri ${KIPRJMOD}/../../EVT_KICAD_LIBS/MITEVT_LOGO.pretty)(options "")(descr ""))
+  (lib (name MITEVT_AUTOMOTIVECON)(type KiCad)(uri ${KIPRJMOD}/../../EVT_KICAD_LIBS/MITEVT_AUTOMOTIVECON.pretty)(options "")(descr ""))
+  (lib (name MITEVT_TP)(type KiCad)(uri ${KIPRJMOD}/../../EVT_KICAD_LIBS/MITEVT_TP.pretty)(options "")(descr ""))
+)

@@ -76,7 +76,7 @@ Wire Wire Line
 Wire Wire Line
 	5750 1350 7000 1350
 $Sheet
-S 7000 1100 1400 2350
+S 7000 1100 1400 2300
 U 583147C9
 F0 "io" 60
 F1 "io.sch" 60
@@ -125,4 +125,12 @@ Wire Wire Line
 	7000 2750 5750 2750
 Wire Wire Line
 	5750 2850 7000 2850
+Text Notes 5400 3850 2    60   ~ 0
+MPC (3.3V) = 95mA
+Text Notes 7000 4050 0    60   ~ 0
+MPC (3.3V) = 20mA\n\nMPC(5V) = 90mA
+Text Notes 5850 5300 0    60   ~ 0
+Board Total:\nMPC (3.3V) = 115mA\nMPC (5V + 3.3V) = 205mA
+Text Notes 6950 6450 0    60   ~ 0
+*MPC = Max Power Consumption
 $EndSCHEMATC
