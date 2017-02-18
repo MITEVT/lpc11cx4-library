@@ -101,16 +101,25 @@ int main(void) {
 
     data[0] = 0x0E;
     data[1] = 0x0E;
+    data[2] = 0x0E;
+    data[3] = 0x0E;
+    data[4] = 0x0E;
+    data[5] = 0x0E;
+    data[6] = 0x0E;
+    data[7] = 0x0E;
+    data[8] = 0x0E;
+    data[9] = 0x0E;
+    data[10] = 0x0E;
 
-    LC1024_WriteMem(&address[0], &data[0], 2);
+    LC1024_WriteMem(&address, &data, 10);
     Chip_UART_SendBlocking(LPC_USART, "writing D to memory...\n", 23);
     // PrintRxBuffer();
 
     delay(5);
 
-    LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
+    LC1024_ReadMem(&address, &Rx_Buf, 10);
     
-    if(Rx_Buf[4] == 0xE) {
+    if(Rx_Buf[0] == 0xE) {
         Chip_UART_SendBlocking(LPC_USART, "Passed write test 1!\n", 21);
     } else {
         Chip_UART_SendBlocking(LPC_USART, "Failed write test 1 :(\n", 23);
@@ -120,14 +129,14 @@ int main(void) {
     data[0] = 0x0A;
     data[1] = 0x0A;
 
-    LC1024_WriteMem(&address[0], &data[0], 2);
+    LC1024_WriteMem(&address, &data, 2);
     Chip_UART_SendBlocking(LPC_USART, "writing A to memory...\n", 23);
 
     delay(5);
 
-    LC1024_ReadMem(&address[0], &Rx_Buf[0], 2);
+    LC1024_ReadMem(&address, &Rx_Buf, 2);
 
-    if(Rx_Buf[5] == 0xA) {
+    if(Rx_Buf[1] == 0xA) {
         Chip_UART_SendBlocking(LPC_USART, "Passed write test 2!\n", 21);
     } else {
         Chip_UART_SendBlocking(LPC_USART, "Failed write test 2 :(\n", 23);
