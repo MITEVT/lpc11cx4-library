@@ -35,6 +35,14 @@ int Brusa_DecodeStatus(NLG5_STATUS_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	return 0;
 }
 
+bool Brusa_CheckOn(CCAN_MSG_OBJ_T *msg_obj) {
+	if (msg_obj->dlc != NLG5_STATUS_DLC) {
+		return false;
+	}
+
+	
+}
+
 int Brusa_DecodeActI(NLG5_ACT_I_T *contents, CCAN_MSG_OBJ_T *msg_obj) {
 	if (msg_obj->dlc != NLG5_ACT_I_DLC) {
 		return -1;

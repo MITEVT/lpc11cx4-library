@@ -72,6 +72,7 @@ typedef struct {
 } NLG5_STATUS_T;
 
 int Brusa_DecodeStatus(NLG5_STATUS_T *contents, CCAN_MSG_OBJ_T *msg_obj);
+bool Brusa_CheckOn(CCAN_MSG_OBJ_T *msg_obj);
 
 // ------------------------------------------------
 // NLG5 Actual Values 1

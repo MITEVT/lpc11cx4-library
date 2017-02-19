@@ -239,6 +239,7 @@ LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T 
 	}
 }
 
+// Once updates on change
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks) {
 	bool *bal_ptr = balance_req;
 	bool change = false;
@@ -477,12 +478,13 @@ LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_
 
 LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks) {
 	int i;
+	// [TODO] ensure that when sending out you have correct order
 	for (i = 0; i < config->num_modules; i++) {
 		uint8_t *tx_ptr = state->tx_buf + 4 + 8 * i;
 		tx_ptr[0] = state->cfg[0]; tx_ptr[1] = state->cfg[1];
 		tx_ptr[2] = state->cfg[2]; tx_ptr[3] = state->cfg[3];
-		tx_ptr[4] = state->bal_list[i] & 0xFF;
-		tx_ptr[5] = (state->cfg[5] & 0xF0) | (state->bal_list[i] >> 8);
+		tx_ptr[4] = state->bal_list[config->num_modules - i - 1] & 0xFF;
+		tx_ptr[5] = (state->cfg[5] & 0xF0) | (state->bal_list[config->num_modules - i - 1] >> 8);
 		uint16_t pec = _calculate_pec(tx_ptr, 6);
 		tx_ptr[6] = pec >> 8;
 		tx_ptr[7] = pec & 0xFF;
