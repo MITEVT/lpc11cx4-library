@@ -2,7 +2,7 @@
 #include "lc1024.h"
 #include <string.h>
 
-#define SPI_BUFFER_SIZE 12
+#define SPI_BUFFER_SIZE 80
 
 static uint8_t Tx_Buf[SPI_BUFFER_SIZE];
 static Chip_SSP_DATA_SETUP_T xf_setup;
@@ -74,6 +74,8 @@ void LC1024_ReadMem(uint8_t *address, uint8_t *rcv_buf, uint8_t len) {
     Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, false);
     Chip_SSP_RWFrames_Blocking(_pSSP, &xf_setup);
     Chip_GPIO_SetPinState(LPC_GPIO, _cs_gpio, _cs_pin, true);
+
+	memcpy(rcv_buf, rcv_buf+4, len);
 }
 
 
