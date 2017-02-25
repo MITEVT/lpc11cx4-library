@@ -79,8 +79,8 @@ int main(void) {
 	}
 
     address[0] = 0x00;
-    address[1] = 0x0F;
-    address[2] = 0x0F;
+    address[1] = 0x00;
+    address[2] = 0x00;
 
 	GPIO_Config();
 	LED_Config();
