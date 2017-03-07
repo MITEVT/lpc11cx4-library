@@ -74,7 +74,20 @@ void CAN_ResetPeripheral(void) {
 }
 
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
-    return can_error;
+    switch(can_error) {
+       case 0: return NO_CAN_ERROR;
+       case 1: return PASS_CAN_ERROR;
+       case 2: return PASS_CAN_ERROR;
+       case 4: return WARN_CAN_ERROR_WARN;
+       case 8: return BOFF_CAN_ERROR;
+       case 16: return STUF_CAN_ERROR;
+       case 32: return FORM_CAN_ERROR;
+       case 64: return ACK_CAN_ERROR;
+       case 128: return BIT1_CAN_ERROR;
+       case 256: return BIT0_CAN_ERROR;
+       case 512: return CRC_CAN_ERROR;
+       default: return UNRECOGNIZED_ERROR_CODE;
+    }
 }
 
 /*************************************************

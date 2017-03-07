@@ -2,9 +2,21 @@
 #ifndef _CAN_H_
 #define _CAN_H_
 
+// integrates with and based on ccand_11x.h error types
+// explanations of page 289 of lpc11cx4 user manual
 typedef enum CAN_ERROR {
     NO_CAN_ERROR,
     NO_RX_CAN_MESSAGE,
+    PASS_CAN_ERROR,
+    WARN_CAN_ERROR_WARN,
+    BOFF_CAN_ERROR,
+    STUF_CAN_ERROR,
+    FORM_CAN_ERROR,
+    ACK_CAN_ERROR,
+    BIT1_CAN_ERROR,
+    BIT0_CAN_ERROR,
+    CRC_CAN_ERROR,
+    UNRECOGNIZED_ERROR_CODE
 } CAN_ERROR_T;
 
 void CAN_Init(uint32_t baud_rate);
