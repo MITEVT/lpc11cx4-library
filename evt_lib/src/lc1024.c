@@ -1,4 +1,3 @@
-#include "chip.h"
 #include "lc1024.h"
 #include <string.h>
 
@@ -6,10 +5,12 @@
 
 static uint8_t Tx_Buf[SPI_BUFFER_SIZE];
 static Chip_SSP_DATA_SETUP_T xf_setup;
-uint8_t _cs_gpio;
-uint8_t _cs_pin;
-uint32_t _baud;
+static uint8_t _cs_gpio;
+static uint8_t _cs_pin;
+static uint32_t _baud;
 static LPC_SSP_T *_pSSP;
+
+static char str[10];
 
 
 void ZeroTxBuf(uint8_t start);
