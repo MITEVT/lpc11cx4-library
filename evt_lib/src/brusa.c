@@ -40,6 +40,7 @@ bool Brusa_CheckOn(CCAN_MSG_OBJ_T *msg_obj) {
 		return false;
 	}
 
+	return true;
 	
 }
 

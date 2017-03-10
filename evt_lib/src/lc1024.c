@@ -10,8 +10,6 @@ static uint8_t _cs_pin;
 static uint32_t _baud;
 static LPC_SSP_T *_pSSP;
 
-static char str[10];
-
 
 void ZeroTxBuf(uint8_t start);
 
