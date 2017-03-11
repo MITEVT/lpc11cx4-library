@@ -1,4 +1,5 @@
 #include "ltc6804.h"
+#include "config.h"
 
 /***************************************
 		Private Variables
@@ -76,6 +77,7 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	owt_state = 0;
 
 	memset(wake_buf, 0, WAKE_BUF_LEN);
+	memset(state->bal_list, 0, sizeof(state->bal_list[0])*MAX_NUM_MODULES);
 
 	_wake(config, state, msTicks, true);
 
@@ -262,6 +264,24 @@ LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_S
 		return _set_balance_states(config, state, msTicks);
 	} else {
 		return LTC6804_PASS;
+	}
+}
+
+LTC6804_STATUS_T LTC6804_SetGPIOState(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint8_t gpio, bool val, uint32_t msTicks) {
+	if (gpio > 5 || gpio < 1) {
+		return LTC6804_FAIL;
+	}
+
+	if ((val & 1) == ((state->cfg[0] >> (2 + gpio)) & 1)) {
+		// No Change
+		return LTC6804_PASS;
+	} else {
+		if (val)
+			state->cfg[0] |= 1 << (gpio + 2);
+		else
+			state->cfg[0] &= ~(1 << (gpio + 2));
+
+		return _set_balance_states(config, state, msTicks);
 	}
 }
 
