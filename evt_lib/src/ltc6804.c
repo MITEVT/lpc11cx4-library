@@ -444,6 +444,7 @@ LTC6804_STATUS_T LTC6804_GetGPIOVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 				vol_ptr = vol_ptr + 5; // Num GPIOs
 			}
 
+			vol_ptr = res;
 			r = _read(config, state, RDAUXB, msTicks);
 			if (r == LTC6804_PEC_ERROR) return r;
 			for (i = 0; i < config->num_modules; i++) {
