@@ -286,14 +286,6 @@ LTC6804_STATUS_T LTC6804_SetGPIOState(LTC6804_CONFIG_T *config, LTC6804_STATE_T 
 	}
 }
 
-LTC6804_STATUS_T LTC6804_GPIORiseFall(LTC6804_CONFIG_T * config, LTC6804_STATE_T * state,
-		uint8_t gpio, uint32_t msTicks) {
-	// TODO: should I set the GPIO to 0 at the beginning?
-	// TODO: Think about what to return
-	LTC6804_SetGPIOState(config, state, gpio, 1, msTicks);
-	return LTC6804_SetGPIOState(config, state, gpio, 0, msTicks);
-}
-
 // [TODO] Clear cell votlages and only return pass when recieving not all FF
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks) {
 	if (state->adc_status == LTC6804_ADC_NONE) {
@@ -538,8 +530,6 @@ LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_
 
 // [NOTE] If timing is fucked look here
 LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force) {
-	// if (msTicks - state->last_message < 4 && !force) return LTC6804_PASS;
-
 	if (msTicks - state->last_message < T_IDLE && !force) return LTC6804_PASS;
 
 

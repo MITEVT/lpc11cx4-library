@@ -149,11 +149,42 @@ typedef struct {
 /***************************************
 	Public Function Prototypes
 ****************************************/
-
+/**
+* Initializes the LTC6804 Driver, SPI, and CS GPIO
+* @return always returns LTC6804_PASS
+*/
 LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+
+/**
+* Write the current configuration to the LTC6804. Clears the balance bits
+* @return always returns LTC6804_PASS
+*/
 LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+
+/**
+* Verifies that the LTC6804 Configuration matches the expected configuration
+* @return true if correct, false otherwise
+*/
 bool LTC6804_VerifyCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+
+/**
+* Performs a Cell Voltage Self-test on the LTC6804. Waits until the ADC is free to send the command and then continually returns LTC6804_WAITING 
+* until the ADC values are ready. Then it reads the value and chekcs if the test passed (LTC6804_PASS), failed (LTC6804_FAIL), or generated a 
+* communication error (LTC6804_PEC_ERROR)
+* @return LTC6804_STATUS_T
+*/
 LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+
+/**
+ * Performs an open wire test
+ *
+ * @param      config   The configuration
+ * @param      state    The state
+ * @param      res      The resource
+ * @param      msTicks  The milliseconds ticks
+ *
+ * @return     { description_of_the_return_value }
+ */
 LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_OWT_RES_T *res, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_SetGPIOState(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint8_t gpio, bool val, uint32_t msTicks);
@@ -163,11 +194,5 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 LTC6804_STATUS_T LTC6804_ClearCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 LTC6804_STATUS_T LTC6804_GetGPIOVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t *res, uint32_t msTicks);
 
-
-LTC6804_STATUS_T _command(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
-LTC6804_STATUS_T _write(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
-LTC6804_STATUS_T _read(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint16_t cmd, uint32_t msTicks);
-LTC6804_STATUS_T _wake(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks, bool force);
-LTC6804_STATUS_T _set_balance_states(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 #endif
