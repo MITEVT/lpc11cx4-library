@@ -150,46 +150,113 @@ typedef struct {
 	Public Function Prototypes
 ****************************************/
 /**
-* Initializes the LTC6804 Driver, SPI, and CS GPIO
-* @return always returns LTC6804_PASS
-*/
+ * Initializes the LTC6804 Driver, SPI, and CS GPIO
+ * 
+ * @return always returns LTC6804_PASS
+ */
 LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 /**
-* Write the current configuration to the LTC6804. Clears the balance bits
-* @return always returns LTC6804_PASS
-*/
+ * Write the current configuration to the LTC6804s. Clears the balance bits
+ * 
+ * @return always returns LTC6804_PASS
+ */
 LTC6804_STATUS_T LTC6804_WriteCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 /**
-* Verifies that the LTC6804 Configuration matches the expected configuration
-* @return true if correct, false otherwise
-*/
+ * Verifies that the LTC6804 Configuration matches the expected configuration
+ * 
+ * @return true if correct, false otherwise
+ */
 bool LTC6804_VerifyCFG(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 /**
-* Performs a Cell Voltage Self-test on the LTC6804. Waits until the ADC is free to send the command and then continually returns LTC6804_WAITING 
-* until the ADC values are ready. Then it reads the value and chekcs if the test passed (LTC6804_PASS), failed (LTC6804_FAIL), or generated a 
-* communication error (LTC6804_PEC_ERROR)
-* @return LTC6804_STATUS_T
-*/
+ * Performs a Cell Voltage Self-test on the LTC6804s. Waits until the ADC is free to send the command and then continually returns LTC6804_WAITING 
+ * until the ADC values are ready. Then it reads the value and checks if the test passed (LTC6804_PASS), failed (LTC6804_FAIL), or generated a 
+ * communication error (LTC6804_PEC_ERROR)
+ * 
+ * @return LTC6804_STATUS_T
+ */
 LTC6804_STATUS_T LTC6804_CVST(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
 
 /**
- * Performs an open wire test
+ * Performs an open wire test on the LTC6804s, res contains the failed module/wire. Uses the ADC so it waits (LTC6804_WAITING) while the ADC is in use 
+ * and during conversion time. Then it reads the value and checks if the test passed (LTC6804_PASS), failed (LTC6804_FAIL), or generated a 
+ * communication error (LTC6804_PEC_ERROR)
  *
  * @param      config   The configuration
  * @param      state    The state
  * @param      res      The resource
  * @param      msTicks  The milliseconds ticks
  *
- * @return     { description_of_the_return_value }
+ * @return     current status of test
  */
 LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_OWT_RES_T *res, uint32_t msTicks);
+
+/**
+ * Updates the LTC6804 balance states to match the input array. The input array should have a bool for the each cell in each module in order.
+ * For example, with two modules that have 12 cells each, the array should contain 24 boolean values starting at C0 of the first module and ending
+ * at C11 of the second module
+ *
+ * @param      config       The configuration
+ * @param      state        The state
+ * @param      balance_req  The balance request
+ * @param      msTicks      The milliseconds ticks
+ *
+ * @return     always returns LTC6804_PASS
+ */
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks);
+
+/**
+ * Updates the GPIO state at the given GPIO on all connected LTC6804s (i.e. if you set GPIO1 high, all LTC6804 in the chain will exhibit this)
+ *
+ * @param      config   The configuration
+ * @param      state    The state
+ * @param      gpio     The gpio (between 1 and 5)
+ * @param      val      The value (1 or 0)
+ * @param      msTicks  The milliseconds ticks
+ *
+ * @return     always returns LTC6804_PASS
+ */
 LTC6804_STATUS_T LTC6804_SetGPIOState(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint8_t gpio, bool val, uint32_t msTicks);
+
+/**
+ * Get the current cell voltages. Uses the ADC so it waits (LTC6804_WAITING) while the ADC is in use and during conversion time. 
+ * Then it reads the value and checks if the result passes (LTC6804_PASS), fails (LTC6804_FAIL), or generated a 
+ * communication error (LTC6804_PEC_ERROR)
+ *
+ * @param      config   The configuration
+ * @param      state    The state
+ * @param      res      The result (min, max, voltages)
+ * @param      msTicks  The milliseconds ticks
+ *
+ * @return     current status of voltage read operation
+ */
 LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, LTC6804_ADC_RES_T *res, uint32_t msTicks);
+
+/**
+ * Clear the cell voltages stored on the LTC6804s
+ *
+ * @param      config   The configuration
+ * @param      state    The state
+ * @param      msTicks  The milliseconds ticks
+ *
+ * @return     always returns LTC6804_PASS
+ */
 LTC6804_STATUS_T LTC6804_ClearCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t msTicks);
+
+/**
+ * Get the current gpio voltages. Uses the ADC so it waits (LTC6804_WAITING) while the ADC is in use and during conversion time. 
+ * Then it reads the value and checks if the result passes (LTC6804_PASS), fails (LTC6804_FAIL), or generated a 
+ * communication error (LTC6804_PEC_ERROR)
+ *
+ * @param      config   The configuration
+ * @param      state    The state
+ * @param      res      The resource
+ * @param      msTicks  The milliseconds ticks
+ *
+ * @return     current status of voltage read operation
+ */
 LTC6804_STATUS_T LTC6804_GetGPIOVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, uint32_t *res, uint32_t msTicks);
 
 
