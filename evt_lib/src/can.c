@@ -16,10 +16,13 @@ CCAN_MSG_OBJ_T tmp_msg_obj; // temporarily store data/CAN ID to insert into tx_b
 static bool can_error_flag;
 static uint32_t can_error_info;
 
+static volatile bool busy = false;
+
 bool CAN_IsTxBusy(void);
 void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg);
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error);
 void prepare_tx_msg_obj(uint32_t msg_id, uint8_t* data, uint8_t data_len, CCAN_MSG_OBJ_T* msgobj);
+void do_transmit(CCAN_MSG_OBJ_T *msg_obj);
 
 
 /*************************************************
@@ -106,10 +109,7 @@ void CAN_rx(uint8_t msg_obj_num) {
 /*	CAN transmit callback */
 void CAN_tx(uint8_t msg_obj_num) {
 	UNUSED(msg_obj_num);
-    if(!RingBuffer_IsEmpty(&tx_buffer)) {
-		RingBuffer_Pop(&tx_buffer, &msg_obj);
-        LPC_CCAN_API->can_transmit(&msg_obj);
-    } 
+  busy = false;
 }
 
 /*	CAN error callback */
@@ -170,15 +170,18 @@ CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	if (can_error_flag) {
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
-	} else {
-		if (!RingBuffer_IsEmpty(&rx_buffer)) {
-			RingBuffer_Pop(&rx_buffer, user_buffer);
-            return NO_CAN_ERROR;
-		} else {
-            return NO_RX_CAN_MESSAGE;
-        }
-	}
+	} else if (!RingBuffer_IsEmpty(&rx_buffer)) {
+    RingBuffer_Pop(&rx_buffer, user_buffer);
+    return NO_CAN_ERROR;
+  } else if (!busy && !RingBuffer_IsEmpty(&tx_buffer)){
+    // Receive is called every iteration, so piggyback on it for queue cleanup
+    RingBuffer_Pop(&tx_buffer, &tmp_msg_obj);
+    do_transmit(&tmp_msg_obj);
+  }
+  return NO_RX_CAN_MESSAGE;
 }
+
+
 
 void prepare_tx_msg_obj(uint32_t msg_id, uint8_t* data, uint8_t data_len, CCAN_MSG_OBJ_T* m_obj) {
     m_obj->msgobj = 2;
@@ -190,21 +193,14 @@ void prepare_tx_msg_obj(uint32_t msg_id, uint8_t* data, uint8_t data_len, CCAN_M
     }
 }
 
+void do_transmit(CCAN_MSG_OBJ_T *msg_obj) {
+    busy = true;
+    LPC_CCAN_API->can_transmit(msg_obj);
+}
+
 CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len) {
-	if (can_error_flag) {
-		can_error_flag = false;
-		return Convert_To_CAN_Error(can_error_info);
-	} else {
-        bool busy = CAN_IsTxBusy();
-        if(busy) {
-            prepare_tx_msg_obj(msg_id, data, data_len, &tmp_msg_obj);
-	        RingBuffer_Insert(&tx_buffer, &tmp_msg_obj);
-        } else {
-            prepare_tx_msg_obj(msg_id, data, data_len, &msg_obj);
-            LPC_CCAN_API->can_transmit(&msg_obj);
-        }
-        return NO_CAN_ERROR;
-	}
+  prepare_tx_msg_obj(msg_id, data, data_len, &tmp_msg_obj);
+  return CAN_TransmitMsgObj(&tmp_msg_obj);
 }
 
 CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
@@ -212,13 +208,15 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
 	} else {
-        bool busy = CAN_IsTxBusy();
-        if(busy) {
-	        RingBuffer_Insert(&tx_buffer, msg_obj);
-        } else {
-            LPC_CCAN_API->can_transmit(msg_obj);
-        }
-        return NO_CAN_ERROR;
+    bool has_pending_messages = (busy || !RingBuffer_IsEmpty(&tx_buffer));
+    if (has_pending_messages) {
+      // Message already pending, so add this to FIFO queue
+      RingBuffer_Insert(&tx_buffer, msg_obj);
+    } else {
+      // No messages ahead of us so just go ahead and transmit now
+      do_transmit(msg_obj);
+    }
+    return NO_CAN_ERROR;
 	}
 }
 
