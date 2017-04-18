@@ -110,6 +110,13 @@ void CAN_rx(uint8_t msg_obj_num) {
 void CAN_tx(uint8_t msg_obj_num) {
 	UNUSED(msg_obj_num);
   busy = false;
+
+  if (!RingBuffer_IsEmpty(&tx_buffer)){
+      // Receive is called every iteration, so piggyback on it for queue cleanup
+      RingBuffer_Pop(&tx_buffer, &tmp_msg_obj);
+      do_transmit(&tmp_msg_obj);
+      busy = true;
+  }
 }
 
 /*	CAN error callback */
@@ -174,9 +181,9 @@ CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
     RingBuffer_Pop(&rx_buffer, user_buffer);
     return NO_CAN_ERROR;
   } else if (!busy && !RingBuffer_IsEmpty(&tx_buffer)){
-    // Receive is called every iteration, so piggyback on it for queue cleanup
-    RingBuffer_Pop(&tx_buffer, &tmp_msg_obj);
-    do_transmit(&tmp_msg_obj);
+    /* // Receive is called every iteration, so piggyback on it for queue cleanup */
+    /* RingBuffer_Pop(&tx_buffer, &tmp_msg_obj); */
+    /* do_transmit(&tmp_msg_obj); */
   }
   return NO_RX_CAN_MESSAGE;
 }
