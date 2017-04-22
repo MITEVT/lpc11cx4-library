@@ -41,7 +41,7 @@ OUT_DIR = bin
 CXX_DEFS =
 
 # C definitions
-C_DEFS = -DCORE_M0
+C_DEFS = -DCORE_M0 -D_LTC6804_H_
 
 # ASM definitions
 AS_DEFS = -D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
@@ -169,7 +169,9 @@ endif
 CXX_OBJS = $(addprefix $(OUT_DIR_F), $(notdir $(CXX_SRCS:.$(CXX_EXT)=.o)))
 C_OBJS = $(addprefix $(OUT_DIR_F), $(notdir $(C_SRCS:.$(C_EXT)=.o)))
 AS_OBJS = $(addprefix $(OUT_DIR_F), $(notdir $(AS_SRCS:.$(AS_EXT)=.o)))
-OBJS = $(AS_OBJS) $(C_OBJS) $(CXX_OBJS) $(USER_OBJS)
+# OBJS = $(AS_OBJS) $(C_OBJS) $(CXX_OBJS) $(USER_OBJS)
+T_OBJS = $(AS_OBJS) $(C_OBJS) $(USER_OBJS) # This is how you exclude files [EXCLUDE]
+OBJS = $(subst bin/ltc6804.o,, $(T_OBJS))
 DEPS = $(OBJS:.o=.d)
 INC_DIRS_F = -I. $(patsubst %, -I%, $(INC_DIRS))
 LIB_DIRS_F = $(patsubst %, -L%, $(LIB_DIRS))

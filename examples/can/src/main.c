@@ -57,7 +57,7 @@ int main(void) {
 	SystemCoreClockUpdate();
 
     uint32_t reset_can_peripheral_time;
-    const uint32_t can_error_delay = 5000;
+    const uint32_t can_error_delay = 500;
     bool reset_can_peripheral = false;
 
 	if (SysTick_Config (SystemCoreClock / 1000)) {
@@ -75,53 +75,84 @@ int main(void) {
 	Chip_UART_TXEnable(LPC_USART);
 
 	DEBUG_Print("Started up\n\r");
+    Chip_GPIO_SetPinDIR(LPC_GPIO, 1, 8, 1);
+    Chip_GPIO_SetPinDIR(LPC_GPIO, 2, 7, 1);
+    Chip_GPIO_SetPinDIR(LPC_GPIO, 2, 8, 1);
 
 	CAN_Init(500000);
 
 	uint32_t ret;
-
+    uint32_t last_send = msTicks;
+    uint16_t id = 0;
 	while (1) {
 		uint8_t count;
-		uint8_t data[1];
+		uint8_t data[4];
 
         if(reset_can_peripheral && msTicks > reset_can_peripheral_time) {
-            DEBUG_Print("Attempting to reset CAN peripheral...\r\n ");
+            DEBUG_Print("Attempting to reset CAN peripheral...\r\n");
             CAN_ResetPeripheral();
             CAN_Init(500000);
-            DEBUG_Print("Reset CAN peripheral. \r\n ");
+            DEBUG_Print("Reset CAN peripheral. \r\n");
             reset_can_peripheral = false;
         }
 
-		if (msTicks % 1000 == 0){
-            // recieve message if there is a message
-		    ret = CAN_Receive(&rx_msg);
-            if(ret == NO_RX_CAN_MESSAGE) {
-                DEBUG_Print("No CAN message received...\r\n");
-            } else if(ret == NO_CAN_ERROR) {
-                DEBUG_Print("Recieved data ");
-                Print_Buffer(rx_msg.data, rx_msg.dlc);
-                DEBUG_Print(" from ");
-                itoa(rx_msg.mode_id, str, 16);
-                DEBUG_Print(str);
-                DEBUG_Print("\r\n");
-            } else {
-                DEBUG_Print("CAN Error: ");
-                itoa(ret, str, 2);
-                DEBUG_Print(str);
-                DEBUG_Print("\r\n");
+        // recieve message if there is a message
+        ret = CAN_Receive(&rx_msg);
+        if(ret == NO_CAN_ERROR) {
+            Chip_GPIO_SetPinState(LPC_GPIO, 2, 7, 1);
+            DEBUG_Print("R ");
+            Print_Buffer(rx_msg.data, rx_msg.dlc);
+            DEBUG_Print(" id ");
+            itoa(rx_msg.mode_id, str, 16);
+            DEBUG_Print(str);
+            // // DEBUG_Print(" with datalen ");
+            // // itoa(rx_msg.dlc, str, 16);
+            // // DEBUG_Print(str);
+            // itoa((LPC_CCAN->CANIF1_MCTRL >> 14) & 1, str, 2);
+            // DEBUG_Print(str);
+            // DEBUG_Print(" ");
+            // itoa((LPC_CCAN->CANIF2_MCTRL >> 14) & 1, str, 2);
+            // DEBUG_Print(str);
+            DEBUG_Print("\r\n");
+            Chip_GPIO_SetPinState(LPC_GPIO, 2, 7, 0);
+        } else if (ret == NO_RX_CAN_MESSAGE) {
 
-                DEBUG_Print("Will attempt to reset peripheral in ");
-                itoa(can_error_delay/1000, str, 10);
-                DEBUG_Print(str);
-                DEBUG_Print(" seconds.\r\n");
-                reset_can_peripheral = true;
-                reset_can_peripheral_time = msTicks + can_error_delay;
-            }
+        } else {
+            DEBUG_Print("CAN Error (Rx): ");
+            itoa(ret, str, 2);
+            DEBUG_Print(str);
+            DEBUG_Print("\r\n");
 
-            // transmit a message!
-		    data[0] = 0xAA;
-		    CAN_Transmit(0x600, data, 1);
-		}
+            DEBUG_Print("Will attempt to reset peripheral in ");
+            itoa(can_error_delay/1000, str, 10);
+            DEBUG_Print(str);
+            DEBUG_Print(" seconds.\r\n");
+            reset_can_peripheral = true;
+            reset_can_peripheral_time = msTicks + can_error_delay;
+        }
+
+        
+        if (msTicks - last_send > 20) {
+            DEBUG_Print("---------\r\n");
+            last_send = msTicks;
+            // Chip_GPIO_SetPinState(LPC_GPIO, 2, 8, 1);
+            // int i;
+            // for (i = 0; i < 3; i++) {
+            //     data[0] = 0x11+i;
+            //     data[1] = 0x33+i;
+            //     data[2] = 0x55+i;
+            //     data[3] = 0x77+i;
+            //     ret = CAN_Transmit(id % 0x600, data, 4);
+            //     id++;
+            //     if(ret != NO_CAN_ERROR) {
+            //         DEBUG_Print("CAN Error (Tx): ");
+            //         itoa(ret, str, 2);
+            //         DEBUG_Print(str);
+            //         DEBUG_Print("\r\n");
+            //     }
+            // }
+        }
+        Chip_GPIO_SetPinState(LPC_GPIO, 2, 8, 0);
         
 		if ((count = Chip_UART_Read(LPC_USART, uart_rx_buf, UART_RX_BUFFER_SIZE)) != 0) {
 			switch (uart_rx_buf[0]) {
@@ -130,12 +161,32 @@ int main(void) {
 					data[0] = 0xAA;
 					ret = CAN_Transmit(0x600, data, 1);
                     if(ret != NO_CAN_ERROR) {
-                        DEBUG_Print("CAN Error: ");
+                        DEBUG_Print("CAN Error (Tx): ");
 					    itoa(ret, str, 2);
 					    DEBUG_Print(str);
                         DEBUG_Print("\r\n");
                     }
 					break;
+                case 'b':
+                    DEBUG_Print("Sending CAN with ID 0x601 and 0x602\r\n");
+                    // uint8_t busy_one, busy_two;
+                    data[0] = 0xAA;
+                    ret = CAN_Transmit(0x601, data, 1);
+                    if(ret != NO_CAN_ERROR) {
+                        DEBUG_Print("CAN Error (Tx): ");
+                        itoa(ret, str, 2);
+                        DEBUG_Print(str);
+                        DEBUG_Print("\r\n");
+                    }
+                    data[0] = 0x33;
+                    ret = CAN_Transmit(0x602, data, 1);
+                    if(ret != NO_CAN_ERROR) {
+                        DEBUG_Print("CAN Error (Tx): ");
+                        itoa(ret, str, 2);
+                        DEBUG_Print(str);
+                        DEBUG_Print("\r\n");
+                    }
+                    break;
 				default:
 					DEBUG_Print("Invalid Command\r\n");
 					break;
