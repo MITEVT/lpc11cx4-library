@@ -80,6 +80,8 @@ int main(void) {
     Chip_GPIO_SetPinDIR(LPC_GPIO, 2, 8, 1);
 
 	CAN_Init(500000);
+    CAN_SetMask1(0, 0x7FF); // Don't accept messages
+    CAN_SetMask2(0, 0); // Accept all messages
 
 	uint32_t ret;
     uint32_t last_send = msTicks;
@@ -135,22 +137,22 @@ int main(void) {
         if (msTicks - last_send > 20) {
             DEBUG_Print("---------\r\n");
             last_send = msTicks;
-            // Chip_GPIO_SetPinState(LPC_GPIO, 2, 8, 1);
-            // int i;
-            // for (i = 0; i < 3; i++) {
-            //     data[0] = 0x11+i;
-            //     data[1] = 0x33+i;
-            //     data[2] = 0x55+i;
-            //     data[3] = 0x77+i;
-            //     ret = CAN_Transmit(id % 0x600, data, 4);
-            //     id++;
-            //     if(ret != NO_CAN_ERROR) {
-            //         DEBUG_Print("CAN Error (Tx): ");
-            //         itoa(ret, str, 2);
-            //         DEBUG_Print(str);
-            //         DEBUG_Print("\r\n");
-            //     }
-            // }
+            Chip_GPIO_SetPinState(LPC_GPIO, 2, 8, 1);
+            int i;
+            for (i = 0; i < 3; i++) {
+                data[0] = 0x11+i;
+                data[1] = 0x33+i;
+                data[2] = 0x55+i;
+                data[3] = 0x77+i;
+                ret = CAN_Transmit(id % 0x600, data, 4);
+                id++;
+                if(ret != NO_CAN_ERROR) {
+                    DEBUG_Print("CAN Error (Tx): ");
+                    itoa(ret, str, 2);
+                    DEBUG_Print(str);
+                    DEBUG_Print("\r\n");
+                }
+            }
         }
         Chip_GPIO_SetPinState(LPC_GPIO, 2, 8, 0);
         

@@ -172,25 +172,35 @@ void CAN_Init(uint32_t baud_rate) {
 	/* Enable the CAN Interrupt */
 	NVIC_EnableIRQ(CAN_IRQn);
 
-	/* Configure message object 1 to only ID 0x600 */
-	msg_obj.msgobj = 27;
-	msg_obj.mode_id = 0x000;
-    // ANDs the mask with the input ID and checks if == to mode_id
-	msg_obj.mask = 0x000; 
-	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
-	msg_obj.msgobj = 28;
-	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
-	msg_obj.msgobj = 29;
-	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
-	msg_obj.msgobj = 30;
-	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
-	msg_obj.msgobj = 31;
-	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
+	/* Configure message objects to accept all messages */
+	CAN_SetMask1(0, 0);
+	CAN_SetMask2(0, 0);
 
 	can_error_flag = false;
 	can_error_info = 0;
 
 	memset(msg_obj_stat, 0, sizeof(bool)*NUM_MSG_OBJS);
+}
+
+// ANDs the mask with the input ID and checks if == to mode_id
+void CAN_SetMask1(uint32_t mask, uint32_t mode_id) {
+	msg_obj.msgobj = 27;
+	msg_obj.mode_id = mode_id;
+	msg_obj.mask = mask; 
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
+	msg_obj.msgobj = 28;
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
+	msg_obj.msgobj = 29;
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
+}
+
+void CAN_SetMask2(uint32_t mask, uint32_t mode_id) {
+	msg_obj.msgobj = 30;
+	msg_obj.mode_id = mode_id;
+	msg_obj.mask = mask; 
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
+	msg_obj.msgobj = 31;
+	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 }
 
 CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
