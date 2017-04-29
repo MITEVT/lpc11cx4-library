@@ -184,9 +184,9 @@ void CAN_Init(uint32_t baud_rate) {
 
 // ANDs the mask with the input ID and checks if == to mode_id
 void CAN_SetMask1(uint32_t mask, uint32_t mode_id) {
-	msg_obj.msgobj = 27;
 	msg_obj.mode_id = mode_id;
 	msg_obj.mask = mask; 
+	msg_obj.msgobj = 27;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 	msg_obj.msgobj = 28;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
@@ -195,9 +195,9 @@ void CAN_SetMask1(uint32_t mask, uint32_t mode_id) {
 }
 
 void CAN_SetMask2(uint32_t mask, uint32_t mode_id) {
-	msg_obj.msgobj = 30;
 	msg_obj.mode_id = mode_id;
 	msg_obj.mask = mask; 
+	msg_obj.msgobj = 30;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
 	msg_obj.msgobj = 31;
 	LPC_CCAN_API->config_rxmsgobj(&msg_obj);
@@ -222,9 +222,9 @@ CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len) {
 	}
 	return CAN_TransmitMsgObj(&tmp_msg_obj);
 }
-
+ // TODO clear can error info after getting error
 CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
-	if (can_error_flag) {
+	if (can_error_flag && (can_error_info != 0x800)) { // Not rx buffer full error
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
 	} else {
@@ -249,6 +249,21 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
 
 	    return NO_CAN_ERROR;
 	}
+}
+
+uint8_t str[5];
+
+void CAN_PrintStatus(void) {
+	Chip_UART_SendBlocking(LPC_USART, (msg_obj_stat[0] ? "1 " : "0 "), 2);
+	Chip_UART_SendBlocking(LPC_USART, (msg_obj_stat[0] ? "1\n" : "0\n"), 2);
+
+	itoa(RingBuffer_GetCount(&tx_buffer), str, 10);
+	Chip_UART_SendBlocking(LPC_USART, str, 2);
+	Chip_UART_SendBlocking(LPC_USART, " ", 1);
+	itoa(RingBuffer_GetCount(&rx_buffer), str, 10);
+	Chip_UART_SendBlocking(LPC_USART, str, 2);
+	Chip_UART_SendBlocking(LPC_USART, "\r\n", 1);
+
 }
 
 CAN_ERROR_T CAN_GetErrorStatus(void) {
