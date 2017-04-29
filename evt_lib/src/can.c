@@ -1,6 +1,7 @@
 #ifndef _LEGACY_
 #include "chip.h"
 #include <string.h>
+#include <stdlib.h>
 #include "can.h"
 
 #define CAN_BUF_SIZE 16
@@ -116,12 +117,18 @@ void CAN_rx(uint8_t msg_obj_num) {
 /*	CAN transmit callback */
 void CAN_tx(uint8_t msg_obj_num) {
 	if (msg_obj_num <= NUM_MSG_OBJS) {
+        if(msg_obj_num == 1) {
+            Chip_GPIO_SetPinState(LPC_GPIO, 2, 7, 0);
+        }
 		msg_obj_stat[msg_obj_num] = false;
 
 		if (RingBuffer_Pop(&tx_buffer, &tmp_msg_obj_2)){
 			tmp_msg_obj_2.msgobj = msg_obj_num;
 			LPC_CCAN_API->can_transmit(&tmp_msg_obj_2);
 			msg_obj_stat[msg_obj_num] = true;
+            if(1 == msg_obj_num) {
+                Chip_GPIO_SetPinState(LPC_GPIO, 2, 7, 1);
+            }
 		}
 	} else {
 		can_error_flag = true;
@@ -233,6 +240,9 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
 		for (i = 1; i <= NUM_MSG_OBJS; i++) {
 			if (!msg_obj_stat[i]) { // Message Object is free, begin to send
 				// Send with this message object
+                if(i == 1) {
+                    Chip_GPIO_SetPinState(LPC_GPIO, 2, 7, 1);
+                }
 				msg_obj->msgobj = i;
 				LPC_CCAN_API->can_transmit(msg_obj);
 				msg_obj_stat[i] = true;
@@ -243,6 +253,7 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
 
 		if (!sent) { // Everything is busy, so put in ring buffer
 			if (!RingBuffer_Insert(&tx_buffer, msg_obj)) {
+                LPC_CCAN_API->isr();
 				return TX_BUFFER_FULL_CAN_ERROR;
 			}
 		}
@@ -251,18 +262,21 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
 	}
 }
 
-uint8_t str[5];
+static uint8_t str[5];
 
 void CAN_PrintStatus(void) {
-	Chip_UART_SendBlocking(LPC_USART, (msg_obj_stat[0] ? "1 " : "0 "), 2);
-	Chip_UART_SendBlocking(LPC_USART, (msg_obj_stat[0] ? "1\n" : "0\n"), 2);
+	itoa(msg_obj_stat[1], str, 10);
+	Chip_UART_SendBlocking(LPC_USART, str, 1);
+	itoa(msg_obj_stat[2], str, 10);
+	Chip_UART_SendBlocking(LPC_USART, str, 1);
+	Chip_UART_SendBlocking(LPC_USART, "\r\n", 2);
 
 	itoa(RingBuffer_GetCount(&tx_buffer), str, 10);
 	Chip_UART_SendBlocking(LPC_USART, str, 2);
 	Chip_UART_SendBlocking(LPC_USART, " ", 1);
 	itoa(RingBuffer_GetCount(&rx_buffer), str, 10);
 	Chip_UART_SendBlocking(LPC_USART, str, 2);
-	Chip_UART_SendBlocking(LPC_USART, "\r\n", 1);
+	Chip_UART_SendBlocking(LPC_USART, "\r\n", 2);
 
 }
 
