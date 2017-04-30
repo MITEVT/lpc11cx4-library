@@ -17,6 +17,7 @@ CCAN_MSG_OBJ_T tmp_msg_obj_2;
 
 static volatile bool can_error_flag;
 static volatile uint32_t can_error_info;
+static volatile uint32_t *msTicksPtr;
 
 #define NUM_MSG_OBJS 2
 #if NUM_MSG_OBJS > 2
@@ -62,40 +63,6 @@ void Baudrate_Calculate(uint32_t baud_rate, uint32_t *can_api_timing_cfg) {
 	}
 }
 
-uint8_t CAN_GetTxErrorCount(void) {
-    // page 290 in the user manual
-    return LPC_CCAN->CANEC & 0x000000FF;
-}
-
-uint8_t CAN_GetRxErrorCount(void) {
-    // page 290 in the user manual
-    return (LPC_CCAN->CANEC & 0x00007F00) >> 8;
-}
-
-uint32_t CAN_GetCANINT(void) {
-    // page 302 in the user manual
-    return LPC_CCAN->CANINT;
-}
-
-uint32_t CAN_GetCANEC(void) {
-    // page 302 in the user manual
-    return LPC_CCAN->CANEC;
-}
-
-uint32_t CAN_GetCANSTAT(void) {
-    // page 302 in the user manual
-    return LPC_CCAN->CANSTAT;
-}
-
-bool CAN_IsTxBusy(void) {
-    // page 302 in the user manual
-    return ((LPC_CCAN->CANTXREQ1 & 0x00000002) >> 1) == 1;
-}
-
-void CAN_ResetPeripheral(void) {
-    Chip_SYSCTL_PeriphReset(RESET_CAN0);
-}
-
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
 	if (!can_error) return NO_CAN_ERROR;
     switch(can_error & 0x5) {
@@ -128,14 +95,25 @@ void CAN_rx(uint8_t msg_obj_num) {
 	}
 }
 
-void CAN_TransmitPendingMsg(volatile uint32_t msTicks) {
+void CAN_ClearTxTimedOut(void) {
     uint8_t i;
     for (i = 1; i <= NUM_MSG_OBJS; i++) {
-        if (!msg_obj_stat[i] || msTicks - msg_obj_timeout[i] > TX_TIMEOUT) { 
+        if (*msTicksPtr - msg_obj_timeout[i] > TX_TIMEOUT) { 
+            msg_obj_stat[i] = false;
+        }
+    }
+}
+
+void CAN_TransmitPendingMsg(void) {
+    CAN_ClearTxTimedOut();
+
+    uint8_t i;
+    for (i = 1; i <= NUM_MSG_OBJS; i++) {
+        if (!msg_obj_stat[i]) { 
             if (RingBuffer_Pop(&tx_buffer, &tmp_msg_obj_2)){
                 tmp_msg_obj_2.msgobj = i;
                 LPC_CCAN_API->can_transmit(&tmp_msg_obj_2);
-                msg_obj_timeout[i] = msTicks;
+                msg_obj_timeout[i] = *msTicksPtr;
                 msg_obj_stat[i] = true;
             }
         }
@@ -146,6 +124,7 @@ void CAN_TransmitPendingMsg(volatile uint32_t msTicks) {
 void CAN_tx(uint8_t msg_obj_num) {
 	if (msg_obj_num <= NUM_MSG_OBJS) {
 		msg_obj_stat[msg_obj_num] = false;
+        CAN_TransmitPendingMsg();
 	} else {
 		can_error_flag = true;
 		can_error_info = 0x400;
@@ -168,13 +147,15 @@ void CAN_IRQHandler(void) {
 	LPC_CCAN_API->isr();
 }
 
-void CAN_Init(uint32_t baud_rate) {
+void CAN_Init(uint32_t baud_rate, volatile uint32_t *external_msticks_ptr) {
 
 	RingBuffer_Init(&rx_buffer, _rx_buffer, sizeof(CCAN_MSG_OBJ_T), CAN_BUF_SIZE);
 	RingBuffer_Flush(&rx_buffer);
 
 	RingBuffer_Init(&tx_buffer, _tx_buffer, sizeof(CCAN_MSG_OBJ_T), CAN_BUF_SIZE);
 	RingBuffer_Flush(&tx_buffer);
+
+    msTicksPtr = external_msticks_ptr;
 
 	uint32_t CanApiClkInitTable[2];
 	CCAN_CALLBACKS_T callbacks = {
@@ -202,7 +183,7 @@ void CAN_Init(uint32_t baud_rate) {
 	can_error_flag = false;
 	can_error_info = 0;
 
-	memset(msg_obj_stat, 0, sizeof(bool)*NUM_MSG_OBJS);
+	memset((bool *) msg_obj_stat, 0, sizeof(bool)*NUM_MSG_OBJS);
 }
 
 // ANDs the mask with the input ID and checks if == to mode_id
@@ -227,6 +208,9 @@ void CAN_SetMask2(uint32_t mask, uint32_t mode_id) {
 }
 
 CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
+
+    CAN_TransmitPendingMsg(); // clear tx messages that have timed out
+
 	if (can_error_flag) {
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
@@ -236,17 +220,20 @@ CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer) {
 	return NO_RX_CAN_MESSAGE;
 }
 
-CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len, volatile uint32_t msTicks) {
+CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len) {
+
+    CAN_TransmitPendingMsg(); // clear tx messages that have timed out
+
 	tmp_msg_obj.mode_id = msg_id;
 	tmp_msg_obj.dlc = data_len;
 	uint8_t i;
 	for (i = 0; i < tmp_msg_obj.dlc; i++) {	
 		tmp_msg_obj.data[i] = data[i];
 	}
-	return CAN_TransmitMsgObj(&tmp_msg_obj, msTicks);
+	return CAN_TransmitMsgObj(&tmp_msg_obj);
 }
  // TODO clear can error info after getting error
-CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj, volatile uint32_t msTicks) {
+CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
 	if (can_error_flag && (can_error_info != 0x800)) { // Not rx buffer full error
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
@@ -258,7 +245,7 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj, volatile uint32_t msTick
 				// Send with this message object
 				msg_obj->msgobj = i;
 				LPC_CCAN_API->can_transmit(msg_obj);
-                msg_obj_timeout[i] = msTicks;
+                msg_obj_timeout[i] = *msTicksPtr;
 				msg_obj_stat[i] = true;
 				sent = true;
 				break;
@@ -275,18 +262,46 @@ CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj, volatile uint32_t msTick
 	}
 }
 
-static uint8_t str[5];
-
-void CAN_PrintStatus(void) {
-	itoa(msg_obj_stat[1], str, 10);
-	Chip_UART_SendBlocking(LPC_USART, str, 1);
-	Chip_UART_SendBlocking(LPC_USART, " ", 1);
-	itoa(msg_obj_stat[2], str, 10);
-	Chip_UART_SendBlocking(LPC_USART, str, 1);
-}
+/**************************************************
+ * Status checks
+ * **********************************************/
 
 CAN_ERROR_T CAN_GetErrorStatus(void) {
 	return Convert_To_CAN_Error(can_error_info);
+}
+
+uint8_t CAN_GetTxErrorCount(void) {
+    // page 290 in the user manual
+    return LPC_CCAN->CANEC & 0x000000FF;
+}
+
+uint8_t CAN_GetRxErrorCount(void) {
+    // page 290 in the user manual
+    return (LPC_CCAN->CANEC & 0x00007F00) >> 8;
+}
+
+uint32_t CAN_GetCANINT(void) {
+    // page 302 in the user manual
+    return LPC_CCAN->CANINT;
+}
+
+uint32_t CAN_GetCANEC(void) {
+    // page 302 in the user manual
+    return LPC_CCAN->CANEC;
+}
+
+uint32_t CAN_GetCANSTAT(void) {
+    // page 302 in the user manual
+    return LPC_CCAN->CANSTAT;
+}
+
+bool CAN_IsTxBusy(void) {
+    // page 302 in the user manual
+    return ((LPC_CCAN->CANTXREQ1 & 0x00000002) >> 1) == 1;
+}
+
+void CAN_ResetPeripheral(void) {
+    Chip_SYSCTL_PeriphReset(RESET_CAN0);
 }
 
 #endif
