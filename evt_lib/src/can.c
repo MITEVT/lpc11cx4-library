@@ -25,7 +25,7 @@ static volatile uint32_t *msTicksPtr;
 #endif
 #define TX_TIMEOUT 2
 static volatile bool msg_obj_stat[NUM_MSG_OBJS + 1];
-static volatile bool msg_obj_timeout[NUM_MSG_OBJS + 1];
+static volatile uint32_t msg_obj_timeout[NUM_MSG_OBJS + 1];
 
 
 bool CAN_IsTxBusy(void);
