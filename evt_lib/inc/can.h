@@ -23,7 +23,7 @@ typedef enum CAN_ERROR {
     RX_BUFFER_FULL_CAN_ERROR = 15
 } CAN_ERROR_T;
 
-void CAN_Init(uint32_t baud_rate);
+void CAN_Init(uint32_t baud_rate, volatile uint32_t *msTicksPtr);
 void CAN_SetMask1(uint32_t mask, uint32_t mode_id);
 void CAN_SetMask2(uint32_t mask, uint32_t mode_id);
 CAN_ERROR_T CAN_Receive(CCAN_MSG_OBJ_T* user_buffer);
@@ -31,11 +31,16 @@ CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len);
 CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj);
 CAN_ERROR_T CAN_GetErrorStatus(void);
 
+void CAN_ClearTxTimedOut(void);
+void CAN_TransmitPendingMsg(void);
+
 uint8_t CAN_GetTxErrorCount(void);
 uint8_t CAN_GetRxErrorCount(void);
+uint32_t CAN_GetCANEC(void);
+uint32_t CAN_GetCANINT(void);
+uint32_t CAN_GetCANSTAT(void);
 bool CAN_IsTXBusy(void);
 void CAN_ResetPeripheral(void);
-void CAN_PrintStatus(void);
 
 #endif
 #endif

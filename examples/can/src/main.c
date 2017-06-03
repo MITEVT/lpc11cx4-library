@@ -79,7 +79,7 @@ int main(void) {
     Chip_GPIO_SetPinDIR(LPC_GPIO, 2, 7, 1);
     Chip_GPIO_SetPinDIR(LPC_GPIO, 2, 8, 1);
 
-	CAN_Init(500000);
+	CAN_Init(500000, &msTicks);
     CAN_SetMask1(0, 0x7FF); // Don't accept messages
     CAN_SetMask2(0, 0); // Accept all messages
 
@@ -93,7 +93,7 @@ int main(void) {
         if(reset_can_peripheral && msTicks > reset_can_peripheral_time) {
             DEBUG_Print("Attempting to reset CAN peripheral...\r\n");
             CAN_ResetPeripheral();
-            CAN_Init(500000);
+            CAN_Init(500000, &msTicks);
             DEBUG_Print("Reset CAN peripheral. \r\n");
             reset_can_peripheral = false;
         }
@@ -107,14 +107,6 @@ int main(void) {
             DEBUG_Print(" id ");
             itoa(rx_msg.mode_id, str, 16);
             DEBUG_Print(str);
-            // // DEBUG_Print(" with datalen ");
-            // // itoa(rx_msg.dlc, str, 16);
-            // // DEBUG_Print(str);
-            // itoa((LPC_CCAN->CANIF1_MCTRL >> 14) & 1, str, 2);
-            // DEBUG_Print(str);
-            // DEBUG_Print(" ");
-            // itoa((LPC_CCAN->CANIF2_MCTRL >> 14) & 1, str, 2);
-            // DEBUG_Print(str);
             DEBUG_Print("\r\n");
             Chip_GPIO_SetPinState(LPC_GPIO, 2, 7, 0);
         } else if (ret == NO_RX_CAN_MESSAGE) {
