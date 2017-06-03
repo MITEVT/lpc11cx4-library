@@ -214,7 +214,7 @@ typedef struct {						/*!< LPC11XX/LPC11XXLV/LPC11UXX IOCON Structure */
 
 #if defined(CHIP_LPC11UXX) || defined(CHIP_LPC11EXX) || defined(CHIP_LPC11AXX)
 /**
- * @brief	Sets I/O Control pin mux
+ * @brief	Sets I/O Control pin mux. IT SETS THE REGISTER TO MODE, NOT ORs it.
  * @param	pIOCON		: The base of IOCON peripheral on the chip
  * @param	port		: GPIO port to mux
  * @param	pin			: GPIO pin to mux
@@ -224,7 +224,7 @@ typedef struct {						/*!< LPC11XX/LPC11XXLV/LPC11UXX IOCON Structure */
 void Chip_IOCON_PinMuxSet(LPC_IOCON_T *pIOCON, uint8_t port, uint8_t pin, uint32_t modefunc);
 
 /**
- * @brief	I/O Control pin mux
+ * @brief	I/O Control pin mux. IT SETS THE REGISTER TO MODE, NOT ORs it.
  * @param	pIOCON	: The base of IOCON peripheral on the chip
  * @param	port	: GPIO port to mux
  * @param	pin		: GPIO pin to mux
@@ -240,7 +240,7 @@ STATIC INLINE void Chip_IOCON_PinMux(LPC_IOCON_T *pIOCON, uint8_t port, uint8_t 
 #else
 
 /**
- * @brief	Sets I/O Control pin mux
+ * @brief	Sets I/O Control pin mux. IT SETS THE REGISTER TO MODE, NOT ORs it.
  * @param	pIOCON		: The base of IOCON peripheral on the chip
  * @param	pin			: GPIO pin to mux
  * @param	modefunc	: OR'ed values or type IOCON_*
