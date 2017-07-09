@@ -77,13 +77,17 @@ bool CAN_IsTxBusy(void) {
 
 // TODO SAVE CURRENT IN FLIGHT MESSAGE SO THAT ON RESET ANY IN FLIGHT MESSAGES CAN BE RE-SENT
 
-void CAN_ResetPeripheral(void) {
-    Chip_SYSCTL_PeriphReset(RESET_CAN0);
+bool CAN_ResetPeripheral(void) {
+	if(true){ //LPC_CCAN->CANSTAT>>7&0x01) {
+    	Chip_SYSCTL_PeriphReset(RESET_CAN0);
+    	return true;
+    }
+   return false;
 }
 
 CAN_ERROR_T Convert_To_CAN_Error(uint32_t can_error) {
 	if (!can_error) return NO_CAN_ERROR;
-    switch(can_error & 0x5) {
+    switch(can_error & 0x6) {
        case 0x1: return STUF_CAN_ERROR;
        case 0x2: return FORM_CAN_ERROR;
        case 0x3: return ACK_CAN_ERROR;

@@ -34,7 +34,7 @@ CAN_ERROR_T CAN_GetErrorStatus(void);
 uint8_t CAN_GetTxErrorCount(void);
 uint8_t CAN_GetRxErrorCount(void);
 bool CAN_IsTXBusy(void);
-void CAN_ResetPeripheral(void);
+bool CAN_ResetPeripheral(void);
 
 #endif
 #endif
