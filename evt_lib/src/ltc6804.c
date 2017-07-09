@@ -73,6 +73,7 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	// state->wait_time = 7; // [TODO] Remove
 	state->last_sleep_wake = msTicks;
 	state->balancing = false;
+	state->flight_time = 0;
 
 	state->adc_status = LTC6804_ADC_NONE;
 
@@ -309,20 +310,19 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 		return LTC6804_WAITING_REFUP;
 	}
 
-  if (!state->waiting && !should_zero_balance) { // Need to pause balancing to read
-    should_zero_balance = true;
-    LTC6804_UpdateBalanceStates(config, state, zero_vector, msTicks);
-    return LTC6804_WAITING;
-  }
+  // if (!state->waiting && !should_zero_balance) { // Need to pause balancing to read
+  //   should_zero_balance = true;
+  //   LTC6804_UpdateBalanceStates(config, state, zero_vector, msTicks);
+  //   return LTC6804_WAITING;
+  // }
 
-  else if (!state->waiting) { // Actually get voltages
+  	if (!state->waiting) { // Actually get voltages
 		state->waiting = true;
 		state->flight_time = msTicks;
 		_command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
 		return LTC6804_WAITING;
 	} else {
-    should_zero_balance = false;
-		// [TODO] make >=
+    // should_zero_balance = false;
 		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
 			state->waiting = false;
 			int i, j;
@@ -432,7 +432,7 @@ LTC6804_STATUS_T LTC6804_GetGPIOVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
 		_command(config, state, (config->adc_mode << 7) | 0x460, msTicks); // ADAX, All Channels
 		return LTC6804_WAITING;
 	} else {
-		if (msTicks - state->flight_time >= state->wait_time) { // We've waited long enough
+		if (msTicks - state->flight_time > state->wait_time) { // We've waited long enough
 			state->waiting = false;
 			int i;
 			uint32_t *vol_ptr = res;
