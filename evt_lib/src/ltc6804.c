@@ -10,7 +10,7 @@ static uint8_t wake_buf[WAKE_BUF_LEN];
 static uint16_t owt_state;
 static uint32_t owt_time;
 static uint8_t owt_up_rx_buf[4][LTC6804_CALC_BUFFER_LEN(15)]; // [TODO] Move into ltc6804_state
-static bool zero_vector[MAX_NUM_MODULES * MAX_CELLS_PER_MODULE];
+// static bool zero_vector[MAX_NUM_MODULES * MAX_CELLS_PER_MODULE];
 static bool should_zero_balance;
 
 #define _IS_ASLEEP(state, msTicks) (msTicks - state->last_message > T_SLEEP)
@@ -80,7 +80,7 @@ LTC6804_STATUS_T LTC6804_Init(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, 
 	owt_state = 0;
 
 	memset(wake_buf, 0, WAKE_BUF_LEN);
-  memset(zero_vector, 0, sizeof(bool) * MAX_NUM_MODULES * MAX_CELLS_PER_MODULE);
+  // memset(zero_vector, 0, sizeof(bool) * MAX_NUM_MODULES * MAX_CELLS_PER_MODULE);
 	memset(state->bal_list, 0, sizeof(state->bal_list[0])*MAX_NUM_MODULES);
 
   should_zero_balance = false;
@@ -249,9 +249,9 @@ LTC6804_STATUS_T LTC6804_OpenWireTest(LTC6804_CONFIG_T *config, LTC6804_STATE_T 
 
 // Once updates on change
 LTC6804_STATUS_T LTC6804_UpdateBalanceStates(LTC6804_CONFIG_T *config, LTC6804_STATE_T *state, bool *balance_req, uint32_t msTicks) {
-  if (should_zero_balance) {
-    balance_req = zero_vector;
-  }
+  // if (should_zero_balance) {
+  //   balance_req = zero_vector;
+  // }
 	bool *bal_ptr = balance_req;
 	bool change = false;
 	int i, j;
@@ -319,7 +319,7 @@ LTC6804_STATUS_T LTC6804_GetCellVoltages(LTC6804_CONFIG_T *config, LTC6804_STATE
   	if (!state->waiting) { // Actually get voltages
 		state->waiting = true;
 		state->flight_time = msTicks;
-		_command(config, state, (config->adc_mode << 7) | 0x270, msTicks); // ADCV, All Channels, DCP=1
+		_command(config, state, (config->adc_mode << 7) | 0x260, msTicks); // ADCV, All Channels, DCP=1
 		return LTC6804_WAITING;
 	} else {
     // should_zero_balance = false;
