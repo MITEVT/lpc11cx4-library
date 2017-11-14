@@ -36,12 +36,15 @@ LD_SCRIPT = gcc.ld
 
 # output folder (absolute or relative path, leave empty for in-tree compilation)
 OUT_DIR = bin
+DIFF_DIR = .diffs
 
 # C++ definitions (e.g. "-Dsymbol_with_value=0xDEAD -Dsymbol_without_value")
 CXX_DEFS =
 
 # C definitions
-C_DEFS = -DCORE_M0
+# MORE BELOW
+# C_DEFS = -DCORE_M0
+C_DEFS = -DCORE_M0 $(BIN_HASH_FLAG)
 
 # ASM definitions
 AS_DEFS = -D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
@@ -109,7 +112,7 @@ C_STD = gnu89
 #=============================================================================#
 
 COMPORT = $(word 1, $(wildcard /dev/tty.usbserial-*) $(wildcard /dev/ttyUSB*))
-BAUDRATE = 115200
+BAUDRATE = 9600
 CLOCK_OSC = 12000
 
 #=============================================================================#
@@ -126,6 +129,12 @@ ifeq ($(strip $(OUT_DIR)), )
 	OUT_DIR_F =
 else
 	OUT_DIR_F = $(strip $(OUT_DIR))/
+endif
+
+ifeq ($(strip $(DIFF_DIR)), )
+	DIFF_DIR_F =
+else
+	DIFF_DIR_F = $(strip $(DIFF_DIR))/
 endif
 
 #=============================================================================#
@@ -194,6 +203,7 @@ GENERATED = $(wildcard $(patsubst %, $(OUT_DIR_F)*.%, bin d dmp elf hex lss lst 
 #=============================================================================#
 
 all : make_output_dir $(ELF) $(LSS) $(DMP) $(HEX) $(BIN) print_size
+all_writeflash : make_output_dir precompile 
 
 # make object files dependent on Makefile
 $(OBJS) : Makefile
@@ -208,6 +218,39 @@ $(ELF) : $(OBJS)
 	@echo 'Linking target: $(ELF)'
 	$(CC) $(LD_FLAGS_F) $(OBJS) $(LIBS) -o $@
 	@echo ' '
+
+#-----------------------------------------------------------------------------#
+# Computing hash of ELF
+#-----------------------------------------------------------------------------#
+
+precompile_makedir : $(ELF)
+	@echo 'pre-link of target: $(ELF)'
+	$(shell mkdir $(DIFF_DIR_F) 2>/dev/null)
+
+precompile_gethash : precompile_makedir
+	$(eval BIN_HASH = $(shell md5sum bin/*.elf | cut -d ' ' -f 1))
+	$(eval BIN_HASH_FLAG = -D$(BIN_HASH))
+	@echo hash of binary is $(BIN_HASH)
+
+precompile_getlatestcommit : precompile_gethash
+	$(eval LATEST_GIT_COMMIT = $(shell git log | head -1 | cut -d ' ' -f 2))
+	@echo latest git commit is $(LATEST_GIT_COMMIT)
+
+precompile_makeoutfile : precompile_getlatestcommit
+	$(shell echo "DIFF BASED ON COMMIT" $(LATEST_GIT_COMMIT) > $(DIFF_DIR_F)$(BIN_HASH).txt)
+	$(shell echo "" >> $(DIFF_DIR_F)$(BIN_HASH).txt)
+
+precompile_addgitdiffs : precompile_makeoutfile
+	$(shell git diff >> $(DIFF_DIR_F)$(BIN_HASH).txt)
+
+precompile_recompile_with_new_var1 :  precompile_addgitdiffs
+	$(MAKE) clean
+
+precompile_recompile_with_new_var :  precompile_recompile_with_new_var1
+	$(MAKE) $(HEX) BIN_HASH_FLAG=-DHASH=\\\"$(BIN_HASH)\\\"
+
+precompile : precompile_recompile_with_new_var print_size
+	@echo done compiling and feeding in hash!
 
 #-----------------------------------------------------------------------------#
 # compiling - C++ source -> objects
@@ -291,7 +334,7 @@ make_output_dir :
 # Write to flash of chip
 #-----------------------------------------------------------------------------#
 
-writeflash: all
+writeflash: all_writeflash
 	@echo "Writing to" $(COMPORT)
 	lpc21isp -NXPARM -control $(HEX) $(COMPORT) $(BAUDRATE) $(CLOCK_OSC)
 
