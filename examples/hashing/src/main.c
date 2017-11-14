@@ -47,7 +47,7 @@ int main(void)
 	Chip_GPIO_Init(LPC_GPIO);
     Chip_GPIO_WriteDirBit(LPC_GPIO, LED0, true);
     
-    DEBUG_Print("Press 'h' to see the hash of the binary running on this microcontroller.\r\n");
+    DEBUG_Print("Press 'h' to see the hash of the binary curently running on this microcontroller.\r\n");
 	while(1) {
 		uint8_t count;
 		if ((count = Chip_UART_Read(LPC_USART, Rx_Buf, 8)) != 0) {
