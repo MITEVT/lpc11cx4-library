@@ -228,6 +228,9 @@ CAN_ERROR_T CAN_Transmit(uint32_t msg_id, uint8_t* data, uint8_t data_len) {
 }
 
 CAN_ERROR_T CAN_TransmitMsgObj(CCAN_MSG_OBJ_T *msg_obj) {
+	char str[10];
+	itoa(RingBuffer_GetCount(&tx_buffer),str,10);
+	Chip_UART_SendBlocking(LPC_USART, str, strlen(str));
 	if (can_error_flag) {
 		can_error_flag = false;
 		return Convert_To_CAN_Error(can_error_info);
