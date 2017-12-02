@@ -78,6 +78,8 @@ bool CAN_IsTxBusy(void) {
 // TODO SAVE CURRENT IN FLIGHT MESSAGE SO THAT ON RESET ANY IN FLIGHT MESSAGES CAN BE RE-SENT
 
 bool CAN_ResetPeripheral(void) {
+	RingBuffer_Flush(rx_buffer);
+	RingBuffer_Flush(tx_buffer);
 	if(LPC_CCAN->CANSTAT>>7&0x01) {
     	Chip_SYSCTL_PeriphReset(RESET_CAN0);
     	return true;
