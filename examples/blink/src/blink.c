@@ -3,8 +3,8 @@
 
 const uint32_t OscRateIn = 0;
 
-#define LED0 2, 8
-#define LED1 2, 7
+#define LED0 2, 11
+#define LED1 1, 10
 
 volatile uint32_t msTicks;
 

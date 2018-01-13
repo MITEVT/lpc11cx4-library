@@ -11,7 +11,7 @@ const uint32_t OscRateIn = 0;
 #define ADDR_LEN 3
 #define MAX_DATA_LEN 16
 
-#define LED0 2, 10
+#define LED0 2, 11
 volatile uint32_t msTicks;
 
 static char str[100];
@@ -86,7 +86,7 @@ int main(void) {
 	LED_Config();
 
     uart_init();
-    LC1024_Init(LPC_SSP1, 600000, 0, 7);
+    LC1024_Init(LPC_SSP1, 600000, 2, 9);
     
     ZeroRxBuf();
 

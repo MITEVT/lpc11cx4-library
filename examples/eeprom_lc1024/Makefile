@@ -48,7 +48,7 @@ AS_DEFS = -D__STARTUP_CLEAR_BSS -D__START=main -DRAM_MODE=1
 
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
-INC_DIRS = inc/ ../../lpc_chip_11cxx_lib/inc ../../evt_lib/inc
+INC_DIRS = inc/ ../../lpc_chip_11cxx_lib/inc ../../evt_lib/inc/
 
 # library directories (absolute or relative paths to additional folders with
 # libraries)
@@ -60,7 +60,7 @@ LIBS =
 
 # additional directories with source files (absolute or relative paths to
 # folders with source files, current folder is always included)
-SRCS_DIRS = ../../lpc_chip_11cxx_lib/src src/ ../../evt_lib/src
+SRCS_DIRS = ../../lpc_chip_11cxx_lib/src src/ ../../evt_lib/src/
 
 # extension of C++ files
 CXX_EXT = cpp
